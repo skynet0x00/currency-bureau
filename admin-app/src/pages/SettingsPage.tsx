@@ -48,7 +48,7 @@ export function SettingsPage({ push: pushProp }: SettingsPageProps) {
       }
     }
     fetchConfig();
-  }, []);
+  }, [push, token]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();

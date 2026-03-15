@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect, type ReactElement } from 'react';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -8,24 +8,6 @@ export interface ToastItem {
   type: ToastType;
 }
 
-export function useToast() {
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
-
-  const push = useCallback((message: string, type: ToastType = 'info') => {
-    const id = Math.random().toString(36).slice(2);
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 4000);
-  }, []);
-
-  const remove = useCallback((id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
-  }, []);
-
-  return { toasts, push, remove };
-}
-
 const typeStyles: Record<ToastType, string> = {
   success: 'bg-emerald-600 dark:bg-emerald-700 text-white',
   error:   'bg-red-600 dark:bg-red-700 text-white',
@@ -33,7 +15,7 @@ const typeStyles: Record<ToastType, string> = {
   warning: 'bg-amber-500 dark:bg-amber-600 text-white',
 };
 
-const typeIcons: Record<ToastType, React.ReactElement> = {
+const typeIcons: Record<ToastType, ReactElement> = {
   success: (
     <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

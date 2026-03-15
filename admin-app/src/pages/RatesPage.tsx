@@ -13,6 +13,23 @@ interface RatesPageProps {
   push?: (message: string, type?: ToastType) => void;
 }
 
+interface RawRateResponse {
+  currency_code: string;
+  name?: string;
+  currency_name?: string;
+  flag_emoji?: string;
+  flag?: string;
+  market_rate: number;
+  buy_rate: number;
+  sell_rate: number;
+  last_updated?: string;
+  last_fetched?: string;
+}
+
+interface RatesUpdatedPayload {
+  rates?: RawRateResponse[];
+}
+
 export function RatesPage({ push: pushProp }: RatesPageProps) {
   let push: (message: string, type?: ToastType) => void;
   try {
@@ -33,11 +50,11 @@ export function RatesPage({ push: pushProp }: RatesPageProps) {
 
   // API returns { base, rates: [{ currency_code, name, flag_emoji, buy_rate, sell_rate, market_rate, last_updated }] }
   // Transform to admin Rate type: { currency_code, currency_name, flag, ..., last_fetched }
-  function toAdminRate(r: any): Rate {
+  function toAdminRate(r: RawRateResponse): Rate {
     return {
       currency_code: r.currency_code,
-      currency_name: r.name ?? r.currency_name,
-      flag: r.flag_emoji ?? r.flag,
+      currency_name: r.name ?? r.currency_name ?? '',
+      flag: r.flag_emoji ?? r.flag ?? '',
       market_rate: r.market_rate,
       buy_rate: r.buy_rate,
       sell_rate: r.sell_rate,
@@ -63,7 +80,7 @@ export function RatesPage({ push: pushProp }: RatesPageProps) {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, push]);
 
   useEffect(() => { fetchRates(); }, [fetchRates]);
 
@@ -79,11 +96,11 @@ export function RatesPage({ push: pushProp }: RatesPageProps) {
     };
   }, [socket]);
 
-  useSocketEvent<any>('rates:updated', (payload) => {
-    const rawRates = payload?.rates ?? (Array.isArray(payload) ? payload : []);
+  useSocketEvent<RatesUpdatedPayload>('rates:updated', (payload) => {
+    const rawRates: RawRateResponse[] = payload?.rates ?? [];
     const updatedRates = rawRates.map(toAdminRate);
     const changed = new Set<string>();
-    updatedRates.forEach((r: Rate) => {
+    updatedRates.forEach((r) => {
       const prev = prevRatesRef.current.get(r.currency_code);
       if (!prev || prev.buy_rate !== r.buy_rate || prev.sell_rate !== r.sell_rate) {
         changed.add(r.currency_code);

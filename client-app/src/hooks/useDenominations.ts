@@ -1,13 +1,22 @@
 import { useState, useEffect } from 'react';
 import type { CurrencyDenominations } from '../types';
 
+interface DenominationApiItem {
+  denomination: number;
+  quantity: number;
+}
+
+interface DenominationApiResponse {
+  denominations?: DenominationApiItem[];
+}
+
 // API returns { currency_code, denominations: [{ denomination, quantity }] }
 // Transform to the CurrencyDenominations shape expected by the UI
-function toClientDenominations(raw: any, code: string): CurrencyDenominations {
+function toClientDenominations(raw: DenominationApiResponse, code: string): CurrencyDenominations {
   return {
     code,
     name: code,
-    denominations: (raw.denominations ?? []).map((d: any) => ({
+    denominations: (raw.denominations ?? []).map((d: DenominationApiItem) => ({
       value: d.denomination,
       label: Number.isInteger(d.denomination)
         ? d.denomination.toLocaleString()
@@ -19,17 +28,20 @@ function toClientDenominations(raw: any, code: string): CurrencyDenominations {
 
 export function useDenominations(currencyCode: string | null) {
   const [data, setData] = useState<CurrencyDenominations | null>(null);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!currencyCode) { setData(null); return; }
-    setLoading(true);
+    if (!currencyCode) return;
+    let cancelled = false;
     fetch(`/api/currencies/${currencyCode}/denominations`)
       .then((r) => r.json())
-      .then((raw) => setData(toClientDenominations(raw, currencyCode)))
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
+      .then((raw: DenominationApiResponse) => {
+        if (!cancelled) setData(toClientDenominations(raw, currencyCode));
+      })
+      .catch(() => { if (!cancelled) setData(null); });
+    return () => { cancelled = true; };
   }, [currencyCode]);
 
-  return { data, loading };
+  // loading = true while currencyCode is set but data hasn't arrived for it yet
+  const loading = currencyCode !== null && (data === null || data.code !== currencyCode);
+  return { data: currencyCode ? data : null, loading };
 }

@@ -131,8 +131,8 @@ export function ExchangePage({ push }: ExchangePageProps) {
       setCompletedTransaction(txn);
       setConfirmOpen(false);
       push('success', 'Transaction completed successfully!');
-    } catch (e: any) {
-      push('error', e.message || 'Transaction failed');
+    } catch (e) {
+      push('error', e instanceof Error ? e.message : 'Transaction failed');
     } finally {
       setSubmitting(false);
     }

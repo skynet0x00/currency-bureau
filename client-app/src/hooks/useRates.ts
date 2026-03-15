@@ -1,11 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Rate } from '../types';
 import { useSocket } from './useSocket';
+import type { RatesUpdatedPayload } from './useSocket';
 
 const POLL_INTERVAL = 30_000;
 
+interface RateApiResponse {
+  currency_code: string;
+  name: string;
+  flag_emoji: string;
+  buy_rate: number;
+  sell_rate: number;
+  market_rate: number;
+}
+
 // Transform snake_case API response to our camelCase Rate type
-function toRate(r: any): Rate {
+function toRate(r: RateApiResponse): Rate {
   return {
     code:       r.currency_code,
     name:       r.name,
@@ -32,17 +42,17 @@ export function useRates() {
       setLastFetch(new Date());
       setError(null);
       setSecondsLeft(30);
-    } catch (e: any) {
-      setError(e.message ?? 'Failed to load rates');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load rates');
     } finally {
       setLoading(false);
     }
   }, []);
 
   // Socket: real-time rate updates → transform and update state
-  const handleSocketRates = useCallback((data: any) => {
+  const handleSocketRates = useCallback((data: RatesUpdatedPayload) => {
     if (data?.rates) {
-      setRates(data.rates.map(toRate));
+      setRates((data.rates as RateApiResponse[]).map(toRate));
       setLastFetch(new Date());
       setSecondsLeft(30);
     }

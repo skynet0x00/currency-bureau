@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useEffect } from 'react';
 
 export type ToastType = 'success' | 'error' | 'info';
 export interface ToastMessage { id: string; type: ToastType; message: string; }
@@ -34,17 +34,4 @@ function ToastItem({ toast, onRemove }: { toast: ToastMessage; onRemove: (id: st
       <button onClick={() => onRemove(toast.id)} className="opacity-75 hover:opacity-100 text-lg leading-none">×</button>
     </div>
   );
-}
-
-let _id = 0;
-export function useToast() {
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const push = useCallback((type: ToastType, message: string) => {
-    const id = String(++_id);
-    setToasts((prev) => [...prev, { id, type, message }]);
-  }, []);
-  const remove = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
-  return { toasts, push, remove };
 }

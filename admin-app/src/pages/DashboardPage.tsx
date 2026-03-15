@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { CurrencyFlag } from '../components/CurrencyFlag';
 import { useOutletContext } from 'react-router-dom';
 import { useSocketEvent } from '../hooks/useSocket';
@@ -13,11 +13,29 @@ interface DashboardPageProps {
   push?: (message: string, type?: ToastType) => void;
 }
 
+interface RawTransaction {
+  transaction_id?: string;
+  id?: string;
+  currency_code?: string;
+  currency?: string;
+  currency_name?: string;
+  flag_emoji?: string;
+  flag?: string;
+  type?: string;
+  transaction_type?: string;
+  amount_foreign: number;
+  amount_cad: number;
+  rate_used?: number;
+  rate?: number;
+  timestamp?: string;
+  created_at?: string;
+}
+
 interface MetricCardProps {
   title: string;
   value: string | number;
   subtitle?: string;
-  icon: React.ReactElement;
+  icon: ReactNode;
   color: string;
   loading: boolean;
 }
@@ -88,16 +106,16 @@ export function DashboardPage({ push: pushProp }: DashboardPageProps) {
       if (txRes.ok) {
         const rawTx = await txRes.json();
         const txData: Transaction[] = (Array.isArray(rawTx) ? rawTx : (rawTx.transactions ?? [])).map(
-          (raw: any): Transaction => ({
-            id:               raw.transaction_id ?? raw.id,
-            currency_code:    raw.currency_code ?? raw.currency,
-            currency_name:    raw.currency_name,
-            flag:             raw.flag_emoji ?? raw.flag,
-            transaction_type: raw.type ?? raw.transaction_type,
+          (raw: RawTransaction): Transaction => ({
+            id:               raw.transaction_id ?? raw.id ?? '',
+            currency_code:    raw.currency_code ?? raw.currency ?? '',
+            currency_name:    raw.currency_name ?? '',
+            flag:             raw.flag_emoji ?? raw.flag ?? '',
+            transaction_type: (raw.type ?? raw.transaction_type ?? 'buy') as 'buy' | 'sell',
             amount_foreign:   raw.amount_foreign,
             amount_cad:       raw.amount_cad,
-            rate:             raw.rate_used ?? raw.rate,
-            created_at:       raw.timestamp ?? raw.created_at,
+            rate:             raw.rate_used ?? raw.rate ?? 0,
+            created_at:       raw.timestamp ?? raw.created_at ?? '',
           })
         );
         const todayStr = new Date().toLocaleDateString('en-CA');
@@ -130,26 +148,26 @@ export function DashboardPage({ push: pushProp }: DashboardPageProps) {
       }
 
       setLoadingMetrics(false);
-    } catch (err) {
+    } catch {
       push('Failed to load dashboard data', 'error');
       setLoadingTx(false);
       setLoadingMetrics(false);
     }
-  }, [token]);
+  }, [token, push]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  useSocketEvent<any>('transaction:new', (raw) => {
+  useSocketEvent<RawTransaction>('transaction:new', (raw) => {
     const tx: Transaction = {
-      id:               raw.transaction_id ?? raw.id,
-      currency_code:    raw.currency_code ?? raw.currency,
-      currency_name:    raw.currency_name,
-      flag:             raw.flag_emoji ?? raw.flag,
-      transaction_type: raw.type ?? raw.transaction_type,
+      id:               raw.transaction_id ?? raw.id ?? '',
+      currency_code:    raw.currency_code ?? raw.currency ?? '',
+      currency_name:    raw.currency_name ?? '',
+      flag:             raw.flag_emoji ?? raw.flag ?? '',
+      transaction_type: (raw.type ?? raw.transaction_type ?? 'buy') as 'buy' | 'sell',
       amount_foreign:   raw.amount_foreign,
       amount_cad:       raw.amount_cad,
-      rate:             raw.rate_used ?? raw.rate,
-      created_at:       raw.timestamp ?? raw.created_at,
+      rate:             raw.rate_used ?? raw.rate ?? 0,
+      created_at:       raw.timestamp ?? raw.created_at ?? '',
     };
     setTransactions(prev => [tx, ...prev.slice(0, 19)]);
     setNewIds(prev => new Set(prev).add(tx.id));

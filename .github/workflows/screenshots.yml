@@ -9,6 +9,7 @@ jobs:
   capture:
     name: Capture UI screenshots
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     permissions:
       contents: write
@@ -17,30 +18,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Start full stack
-        run: docker compose up --build -d
-
-      - name: Wait for backend to be healthy
-        run: |
-          echo "Waiting for backend..."
-          for i in $(seq 1 60); do
-            curl -sf http://localhost:3001/health && echo " ✓ backend ready" && break
-            echo "  attempt $i/60 — retrying in 3s"
-            sleep 3
-          done
-
-      - name: Wait for frontend services
-        run: |
-          echo "Waiting for client-app..."
-          for i in $(seq 1 30); do
-            curl -sf http://localhost:5173 && echo " ✓ client-app ready" && break
-            sleep 2
-          done
-          echo "Waiting for admin-app..."
-          for i in $(seq 1 30); do
-            curl -sf http://localhost:5174 && echo " ✓ admin-app ready" && break
-            sleep 2
-          done
+      - name: Start full stack and wait for all services to be healthy
+        run: docker compose up --build --wait
 
       - uses: actions/setup-node@v4
         with:

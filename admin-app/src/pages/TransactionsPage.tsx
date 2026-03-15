@@ -14,18 +14,36 @@ interface TransactionsPageProps {
 
 const PAGE_SIZE = 20;
 
+interface RawTransaction {
+  transaction_id?: string;
+  id?: string;
+  currency_code?: string;
+  currency?: string;
+  currency_name?: string;
+  flag_emoji?: string;
+  flag?: string;
+  type?: string;
+  transaction_type?: string;
+  amount_foreign: number;
+  amount_cad: number;
+  rate_used?: number;
+  rate?: number;
+  timestamp?: string;
+  created_at?: string;
+}
+
 // API returns snake_case with different field names — normalise to Transaction type
-function toTransaction(raw: any): Transaction {
+function toTransaction(raw: RawTransaction): Transaction {
   return {
-    id:               raw.transaction_id ?? raw.id,
-    currency_code:    raw.currency_code ?? raw.currency,
-    currency_name:    raw.currency_name,
-    flag:             raw.flag_emoji ?? raw.flag,
-    transaction_type: raw.type ?? raw.transaction_type,
+    id:               raw.transaction_id ?? raw.id ?? '',
+    currency_code:    raw.currency_code ?? raw.currency ?? '',
+    currency_name:    raw.currency_name ?? '',
+    flag:             raw.flag_emoji ?? raw.flag ?? '',
+    transaction_type: (raw.type ?? raw.transaction_type ?? 'buy') as 'buy' | 'sell',
     amount_foreign:   raw.amount_foreign,
     amount_cad:       raw.amount_cad,
-    rate:             raw.rate_used ?? raw.rate,
-    created_at:       raw.timestamp ?? raw.created_at,
+    rate:             raw.rate_used ?? raw.rate ?? 0,
+    created_at:       raw.timestamp ?? raw.created_at ?? '',
   };
 }
 
@@ -52,7 +70,7 @@ export function TransactionsPage({ push: pushProp }: TransactionsPageProps) {
 
   const token = localStorage.getItem('bureau_admin_token');
 
-  function buildQuery(overrides: Record<string, string | number> = {}) {
+  const buildQuery = useCallback((overrides: Record<string, string | number> = {}) => {
     const params = new URLSearchParams();
     const currency = overrides.currency !== undefined ? String(overrides.currency) : filterCurrency;
     const type     = overrides.type     !== undefined ? String(overrides.type)     : filterType;
@@ -68,7 +86,7 @@ export function TransactionsPage({ push: pushProp }: TransactionsPageProps) {
     params.set('limit', String(limit));
     params.set('offset', String((pg - 1) * limit));
     return params.toString();
-  }
+  }, [filterCurrency, filterType, filterFrom, filterTo, page]);
 
   const fetchTransactions = useCallback(async (pg = page) => {
     setLoading(true);
@@ -79,7 +97,7 @@ export function TransactionsPage({ push: pushProp }: TransactionsPageProps) {
       const res = await fetch(`/api/transaction?${qs}`, { headers });
       if (res.ok) {
         const data = await res.json();
-        const raw: any[] = Array.isArray(data) ? data : (data.transactions ?? data.data ?? []);
+        const raw: RawTransaction[] = Array.isArray(data) ? data : (data.transactions ?? data.data ?? []);
         const mapped = raw.map(toTransaction);
         setTransactions(mapped);
         if (Array.isArray(data)) {
@@ -95,7 +113,7 @@ export function TransactionsPage({ push: pushProp }: TransactionsPageProps) {
     } finally {
       setLoading(false);
     }
-  }, [page, filterCurrency, filterType, filterFrom, filterTo, token]);
+  }, [page, token, buildQuery, push]);
 
   useEffect(() => {
     fetch('/api/currencies', {
@@ -104,11 +122,11 @@ export function TransactionsPage({ push: pushProp }: TransactionsPageProps) {
       .then(r => r.ok ? r.json() : [])
       .then(data => setCurrencies(Array.isArray(data) ? data : []))
       .catch(() => {});
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     fetchTransactions(page);
-  }, [page, filterCurrency, filterType, filterFrom, filterTo]);
+  }, [page, filterCurrency, filterType, filterFrom, filterTo, fetchTransactions]);
 
   function applyFilters() {
     setPage(1);
@@ -138,7 +156,7 @@ export function TransactionsPage({ push: pushProp }: TransactionsPageProps) {
       const res = await fetch(`/api/transaction?${params.toString()}`, { headers });
       if (!res.ok) throw new Error('Fetch failed');
       const raw = await res.json();
-      const data: Transaction[] = (Array.isArray(raw) ? raw : (raw.transactions ?? raw.data ?? [])).map(toTransaction);
+      const data: Transaction[] = (Array.isArray(raw) ? raw as RawTransaction[] : ((raw.transactions ?? raw.data ?? []) as RawTransaction[])).map(toTransaction);
 
       const cols = ['id', 'created_at', 'currency_code', 'transaction_type', 'amount_foreign', 'amount_cad', 'rate'];
       const rows = [cols.join(',')];

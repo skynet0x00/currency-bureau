@@ -30,6 +30,13 @@ interface EditState {
   value: string;
 }
 
+interface TillSummaryApiItem {
+  code: string;
+  name: string;
+  flagEmoji: string;
+  denominations?: DenomRow[];
+}
+
 export function TillPage({ push: pushProp }: TillPageProps) {
   let push: (message: string, type?: ToastType) => void;
   try {
@@ -57,7 +64,7 @@ export function TillPage({ push: pushProp }: TillPageProps) {
       const res = await fetch('/api/till', { headers });
       if (res.ok) {
         const data = await res.json();
-        setTill((data.summary ?? []).map((s: any) => ({
+        setTill((data.summary ?? []).map((s: TillSummaryApiItem) => ({
           currency_code: s.code,
           currency_name: s.name,
           flag: s.flagEmoji,
@@ -71,7 +78,7 @@ export function TillPage({ push: pushProp }: TillPageProps) {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, push]);
 
   useEffect(() => { fetchTill(); }, [fetchTill]);
 

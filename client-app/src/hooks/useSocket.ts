@@ -1,5 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
+
+export interface RatesUpdatedPayload {
+  rates: unknown[];
+}
 
 let _socket: Socket | null = null;
 
@@ -10,16 +14,14 @@ function getSocket(): Socket {
   return _socket;
 }
 
-export function useSocket(onRatesUpdated?: (data: any) => void) {
-  const socketRef = useRef(getSocket());
-
+export function useSocket(onRatesUpdated?: (data: RatesUpdatedPayload) => void) {
   useEffect(() => {
-    const socket = socketRef.current;
+    const socket = getSocket();
     if (onRatesUpdated) {
       socket.on('rates:updated', onRatesUpdated);
       return () => { socket.off('rates:updated', onRatesUpdated); };
     }
   }, [onRatesUpdated]);
 
-  return socketRef.current;
+  return getSocket();
 }

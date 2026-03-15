@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { ExchangePage } from './pages/ExchangePage';
-import { Toast, useToast } from './components/Toast';
+import { Toast } from './components/Toast';
+import { useToast } from './hooks/useToast';
 
 export default function App() {
   const { toasts, push, remove } = useToast();

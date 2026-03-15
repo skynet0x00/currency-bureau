@@ -8,7 +8,8 @@ import { RatesPage } from './pages/RatesPage';
 import { TransactionsPage } from './pages/TransactionsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { Layout } from './components/Layout';
-import { Toast, useToast } from './components/Toast';
+import { Toast } from './components/Toast';
+import { useToast } from './hooks/useToast';
 
 export default function App() {
   const auth = useAuth();

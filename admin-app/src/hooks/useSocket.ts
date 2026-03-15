@@ -11,17 +11,20 @@ function getSocket(): Socket {
 }
 
 export function useSocket() {
-  return useRef(getSocket()).current;
+  return getSocket();
 }
 
 export function useSocketEvent<T>(event: string, handler: (data: T) => void) {
-  const socket = useRef(getSocket()).current;
   const handlerRef = useRef(handler);
-  handlerRef.current = handler;
 
   useEffect(() => {
+    handlerRef.current = handler;
+  }, [handler]);
+
+  useEffect(() => {
+    const socket = getSocket();
     const cb = (data: T) => handlerRef.current(data);
     socket.on(event, cb);
     return () => { socket.off(event, cb); };
-  }, [event, socket]);
+  }, [event]);
 }

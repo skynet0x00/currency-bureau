@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { CurrencyFlag } from '../components/CurrencyFlag';
 import { useOutletContext } from 'react-router-dom';
 import { useSocketEvent } from '../hooks/useSocket';
 import type { Transaction } from '../types';
@@ -267,7 +268,7 @@ export function DashboardPage({ push: pushProp }: DashboardPageProps) {
                     </td>
                     <td className="px-5 py-3 whitespace-nowrap">
                       <span className="flex items-center gap-2 text-gray-900 dark:text-white font-medium">
-                        <span>{tx.flag}</span>
+                        <CurrencyFlag code={tx.currency_code} />
                         <span>{tx.currency_code}</span>
                       </span>
                     </td>

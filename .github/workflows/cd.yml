@@ -1,0 +1,79 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-push:
+    name: Build & push ${{ matrix.service }}
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: backend
+            context: ./backend
+          - service: client-app
+            context: ./client-app
+          - service: admin-app
+            context: ./admin-app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/currency-bureau-${{ matrix.service }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short,prefix=
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push (backend)
+        if: matrix.service == 'backend'
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # SENTRY_DSN is a runtime env var for the backend — inject it at
+          # container startup via your orchestrator (compose, ECS, k8s), not here.
+          # Reference kept so the secret is clearly documented:
+          # secrets.SENTRY_DSN → set on the running container as SENTRY_DSN
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push (frontend)
+        if: matrix.service != 'backend'
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # VITE_SENTRY_DSN is baked into the JS bundle at build time by Vite
+          build-args: |
+            VITE_SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

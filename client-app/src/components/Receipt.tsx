@@ -1,4 +1,5 @@
 import type { TransactionResponse } from '../types';
+import { CurrencyFlag } from './CurrencyFlag';
 
 interface ReceiptProps {
   transaction: TransactionResponse;
@@ -59,7 +60,8 @@ export function Receipt({ transaction, onNewTransaction }: ReceiptProps) {
                 <>
                   <div className="flex-1 text-center">
                     <div className="text-xs text-gray-400 dark:text-gray-500 mb-1">You gave</div>
-                    <div className="text-xl font-bold text-gray-900 dark:text-white">
+                    <div className="text-xl font-bold text-gray-900 dark:text-white flex items-center justify-center gap-1.5">
+                      <CurrencyFlag code={transaction.currencyCode} />
                       {transaction.foreignAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} {transaction.currencyCode}
                     </div>
                   </div>
@@ -82,7 +84,8 @@ export function Receipt({ transaction, onNewTransaction }: ReceiptProps) {
                   <div className="text-gray-300 dark:text-gray-600 text-2xl">→</div>
                   <div className="flex-1 text-center">
                     <div className="text-xs text-gray-400 dark:text-gray-500 mb-1">You received</div>
-                    <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                    <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1.5">
+                      <CurrencyFlag code={transaction.currencyCode} />
                       {transaction.foreignAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} {transaction.currencyCode}
                     </div>
                   </div>

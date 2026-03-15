@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import type { Rate } from '../types';
+import { CurrencyFlag } from './CurrencyFlag';
 
 interface CurrencySelectorProps {
   rates: Rate[];
@@ -57,7 +58,7 @@ export function CurrencySelector({ rates, value, onChange, placeholder = 'Select
       >
         {selected ? (
           <>
-            <span className="text-2xl leading-none">{selected.flag}</span>
+            <CurrencyFlag code={selected.code} size="lg" />
             <span className="font-semibold text-gray-900 dark:text-white">{selected.code}</span>
             <span className="text-gray-500 dark:text-gray-400 flex-1 text-left text-sm">{selected.name}</span>
           </>
@@ -118,7 +119,7 @@ export function CurrencySelector({ rates, value, onChange, placeholder = 'Select
                       value === rate.code ? 'bg-blue-50 dark:bg-blue-950' : ''
                     }`}
                   >
-                    <span className="text-xl leading-none w-7 text-center">{rate.flag}</span>
+                    <span className="w-7 flex items-center justify-center"><CurrencyFlag code={rate.code} /></span>
                     <span className={`font-semibold text-sm w-10 shrink-0 ${value === rate.code ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-white'}`}>
                       {rate.code}
                     </span>

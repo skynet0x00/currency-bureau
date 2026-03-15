@@ -1,4 +1,5 @@
 import type { Rate } from '../types';
+import { CurrencyFlag } from './CurrencyFlag';
 
 interface RateDisplayProps {
   rate: Rate | null;
@@ -18,7 +19,7 @@ export function RateDisplay({ rate, secondsLeft, mode }: RateDisplayProps) {
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-xl">{rate.flag}</span>
+          <CurrencyFlag code={rate.code} />
           <span className="font-semibold text-gray-900 dark:text-white">{rate.code}</span>
           <span className="text-sm text-gray-500 dark:text-gray-400">{rate.name}</span>
         </div>

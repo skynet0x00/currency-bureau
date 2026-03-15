@@ -1,5 +1,12 @@
 # Bureau Exchange
 
+[![CI](https://github.com/skynet0x00/currency-bureau/actions/workflows/ci.yml/badge.svg)](https://github.com/skynet0x00/currency-bureau/actions/workflows/ci.yml)
+[![CD](https://github.com/skynet0x00/currency-bureau/actions/workflows/cd.yml/badge.svg)](https://github.com/skynet0x00/currency-bureau/actions/workflows/cd.yml)
+[![Docker](https://img.shields.io/badge/ghcr.io-skynet0x00-blue?logo=docker&logoColor=white)](https://github.com/skynet0x00?tab=packages&repo_name=currency-bureau)
+[![Dependabot](https://img.shields.io/badge/dependabot-enabled-025E8C?logo=dependabot&logoColor=white)](https://github.com/skynet0x00/currency-bureau/network/updates)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A production-grade currency exchange bureau web application — live rates, till management, transaction engine, and a real-time admin dashboard.
 
 ---

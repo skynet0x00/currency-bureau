@@ -1,0 +1,163 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Backend ───────────────────────────────────────────────────────────────
+  backend:
+    name: Backend — type-check / test / build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: bureau_user
+          POSTGRES_PASSWORD: bureau_pass
+          POSTGRES_DB: currency_bureau_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bureau_user -d currency_bureau_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: backend/node_modules
+          key: ${{ runner.os }}-backend-${{ hashFiles('backend/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-backend-
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Type check
+        working-directory: backend
+        run: npx tsc --noEmit
+
+      - name: Lint (skip if no config)
+        working-directory: backend
+        run: '[ -f eslint.config.js ] && npm run lint || echo "No ESLint config — skipping"'
+
+      - name: Generate Prisma client
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://bureau_user:bureau_pass@localhost:5432/currency_bureau_test
+        run: npx prisma generate
+
+      - name: Run migrations
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://bureau_user:bureau_pass@localhost:5432/currency_bureau_test
+        run: npx prisma migrate deploy
+
+      - name: Seed database
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://bureau_user:bureau_pass@localhost:5432/currency_bureau_test
+        run: npx ts-node prisma/seed.ts
+
+      - name: Run tests
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://bureau_user:bureau_pass@localhost:5432/currency_bureau_test
+          NODE_ENV: test
+          ADMIN_USER: admin
+          ADMIN_PASS: admin123
+        run: npm test
+
+      - name: Build
+        working-directory: backend
+        run: npm run build
+
+  # ── Client app ───────────────────────────────────────────────────────────
+  client-app:
+    name: Client App — type-check / lint / build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: client-app/node_modules
+          key: ${{ runner.os }}-client-app-${{ hashFiles('client-app/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-client-app-
+
+      - name: Install dependencies
+        working-directory: client-app
+        run: npm ci
+
+      - name: Type check
+        working-directory: client-app
+        run: npx tsc -b
+
+      - name: Lint
+        working-directory: client-app
+        run: npm run lint
+
+      - name: Run tests (skip if none)
+        working-directory: client-app
+        run: npm run test --if-present
+
+      - name: Build
+        working-directory: client-app
+        run: npm run build
+
+  # ── Admin app ────────────────────────────────────────────────────────────
+  admin-app:
+    name: Admin App — type-check / lint / build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: admin-app/node_modules
+          key: ${{ runner.os }}-admin-app-${{ hashFiles('admin-app/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-admin-app-
+
+      - name: Install dependencies
+        working-directory: admin-app
+        run: npm ci
+
+      - name: Type check
+        working-directory: admin-app
+        run: npx tsc -b
+
+      - name: Lint
+        working-directory: admin-app
+        run: npm run lint
+
+      - name: Run tests (skip if none)
+        working-directory: admin-app
+        run: npm run test --if-present
+
+      - name: Build
+        working-directory: admin-app
+        run: npm run build

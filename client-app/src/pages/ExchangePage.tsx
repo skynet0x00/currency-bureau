@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import type { Rate, TransactionResponse } from '../types';
 import { useRates } from '../hooks/useRates';
 import { useDenominations } from '../hooks/useDenominations';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { CurrencyFlag } from '../components/CurrencyFlag';
 import { CurrencySelector } from '../components/CurrencySelector';
 import { RateDisplay } from '../components/RateDisplay';
 import { DenominationPicker } from '../components/DenominationPicker';
@@ -347,7 +348,7 @@ export function ExchangePage({ push }: ExchangePageProps) {
 
             <div className="space-y-3 mb-6">
               <ConfirmRow label="Transaction" value={clientMode === 'buy' ? 'Buying Foreign Currency' : 'Selling Foreign Currency'} />
-              <ConfirmRow label="Currency" value={`${selectedRate.flag} ${selectedRate.code} — ${selectedRate.name}`} />
+              <ConfirmRow label="Currency" value={<span className="flex items-center gap-1.5"><CurrencyFlag code={selectedRate.code} /> {selectedRate.code} — {selectedRate.name}</span>} />
               <ConfirmRow label="Foreign Amount" value={`${foreignAmount.toLocaleString()} ${selectedCurrency}`} />
               <ConfirmRow label="Exchange Rate" value={`1 CAD = ${activeRate.toFixed(4)} ${selectedCurrency}`} />
               <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
@@ -402,7 +403,7 @@ export function ExchangePage({ push }: ExchangePageProps) {
   );
 }
 
-function ConfirmRow({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
+function ConfirmRow({ label, value, highlight = false }: { label: string; value: ReactNode; highlight?: boolean }) {
   return (
     <div className="flex items-center justify-between">
       <span className="text-sm text-gray-500 dark:text-gray-400">{label}</span>

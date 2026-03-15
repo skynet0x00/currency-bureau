@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { CurrencyFlag } from '../components/CurrencyFlag';
 import { useOutletContext } from 'react-router-dom';
 import type { Transaction, Currency } from '../types';
 import type {ToastType} from '../components/Toast';
@@ -193,7 +194,7 @@ export function TransactionsPage({ push: pushProp }: TransactionsPageProps) {
             >
               <option value="">All currencies</option>
               {currencies.map(c => (
-                <option key={c.code} value={c.code}>{c.flag} {c.code} – {c.name}</option>
+                <option key={c.code} value={c.code}>{c.code} – {c.name}</option>
               ))}
             </select>
           </div>
@@ -297,7 +298,7 @@ export function TransactionsPage({ push: pushProp }: TransactionsPageProps) {
                       </td>
                       <td className="px-5 py-3">
                         <span className="flex items-center gap-2 text-gray-900 dark:text-white font-medium">
-                          <span>{tx.flag}</span>
+                          <CurrencyFlag code={tx.currency_code} />
                           <span>{tx.currency_code}</span>
                         </span>
                       </td>

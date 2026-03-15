@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { CurrencyFlag } from '../components/CurrencyFlag';
 import { useOutletContext } from 'react-router-dom';
 import { useSocket, useSocketEvent } from '../hooks/useSocket';
 import type { Rate } from '../types';
@@ -190,7 +191,7 @@ export function RatesPage({ push: pushProp }: RatesPageProps) {
                   >
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2.5">
-                        <span className="text-lg">{rate.flag}</span>
+                        <CurrencyFlag code={rate.currency_code} />
                         <div>
                           <p className="font-semibold text-gray-900 dark:text-white">{rate.currency_code}</p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">{rate.currency_name}</p>

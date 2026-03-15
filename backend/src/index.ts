@@ -1,3 +1,4 @@
+import './instrument'; // Sentry — must be first
 import http from 'http';
 import { createApp } from './app';
 import { initSocket } from './socket';

@@ -1,0 +1,72 @@
+name: Screenshots
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  capture:
+    name: Capture UI screenshots
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start full stack
+        run: docker compose up --build -d
+
+      - name: Wait for backend to be healthy
+        run: |
+          echo "Waiting for backend..."
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:3001/health && echo " ✓ backend ready" && break
+            echo "  attempt $i/60 — retrying in 3s"
+            sleep 3
+          done
+
+      - name: Wait for frontend services
+        run: |
+          echo "Waiting for client-app..."
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:5173 && echo " ✓ client-app ready" && break
+            sleep 2
+          done
+          echo "Waiting for admin-app..."
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:5174 && echo " ✓ admin-app ready" && break
+            sleep 2
+          done
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Playwright
+        run: |
+          npm install playwright
+          npx playwright install chromium --with-deps
+
+      - name: Capture screenshots
+        run: node .github/scripts/take-screenshots.mjs
+
+      - name: Create pull request with fresh screenshots
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "docs: refresh UI screenshots"
+          branch: chore/refresh-screenshots
+          delete-branch: true
+          title: "docs: refresh README screenshots"
+          body: |
+            Automated screenshot refresh triggered by commit ${{ github.sha }}.
+
+            Updated views:
+            - `client-app` — exchange kiosk
+            - `admin-app` — login, dashboard, till, transactions
+          add-paths: |
+            docs/screenshots/

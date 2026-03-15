@@ -1,0 +1,66 @@
+version: 2
+
+updates:
+  # ── Backend ──────────────────────────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    assignees:
+      - "skynet0x00"
+    groups:
+      backend-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # ── Client app ───────────────────────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/client-app"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    assignees:
+      - "skynet0x00"
+    groups:
+      client-app-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # ── Admin app ────────────────────────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/admin-app"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    assignees:
+      - "skynet0x00"
+    groups:
+      admin-app-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # ── GitHub Actions ───────────────────────────────────────────────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    assignees:
+      - "skynet0x00"
+    groups:
+      actions-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"

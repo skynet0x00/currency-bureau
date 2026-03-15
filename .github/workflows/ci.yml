@@ -35,7 +35,7 @@ jobs:
           node-version: 22
 
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: backend/node_modules
           key: ${{ runner.os }}-backend-${{ hashFiles('backend/package-lock.json') }}
@@ -97,7 +97,7 @@ jobs:
           node-version: 22
 
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: client-app/node_modules
           key: ${{ runner.os }}-client-app-${{ hashFiles('client-app/package-lock.json') }}
@@ -136,7 +136,7 @@ jobs:
           node-version: 22
 
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: admin-app/node_modules
           key: ${{ runner.os }}-admin-app-${{ hashFiles('admin-app/package-lock.json') }}

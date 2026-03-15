@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react';
+import { Banknote, Building2, ArrowLeftRight, AlertCircle } from 'lucide-react';
 import type { Rate, TransactionResponse } from '../types';
 import { useRates } from '../hooks/useRates';
 import { useDenominations } from '../hooks/useDenominations';
@@ -15,7 +16,7 @@ interface ExchangePageProps {
   push: (type: ToastType, message: string) => void;
 }
 
-// Client perspective modes — used in the UI
+// Client perspective modes
 // "BUY" from client = client receives foreign, pays CAD = bureau type 'sell'
 // "SELL" from client = client gives foreign, gets CAD = bureau type 'buy'
 type ClientMode = 'buy' | 'sell';
@@ -23,6 +24,8 @@ type ClientMode = 'buy' | 'sell';
 function clientToBureauMode(clientMode: ClientMode): 'buy' | 'sell' {
   return clientMode === 'buy' ? 'sell' : 'buy';
 }
+
+const POPULAR_CURRENCIES = ['USD', 'EUR', 'GBP', 'MAD', 'AED', 'TND'];
 
 export function ExchangePage({ push }: ExchangePageProps) {
   const { rates, loading: ratesLoading, error: ratesError, secondsLeft } = useRates();
@@ -62,9 +65,7 @@ export function ExchangePage({ push }: ExchangePageProps) {
     setDenomQtys([]);
   }, [selectedCurrency, clientMode]);
 
-  // Calculate CAD total
   const foreignAmountFromDenoms = denomQtys.reduce((sum, q) => sum + q.value * q.quantity, 0);
-  // Use denomination total if it's non-zero, otherwise use manual input
   const foreignAmount = foreignAmountFromDenoms > 0 ? foreignAmountFromDenoms : debouncedAmount;
 
   const activeRate = selectedRate
@@ -73,7 +74,6 @@ export function ExchangePage({ push }: ExchangePageProps) {
 
   const cadTotal = activeRate > 0 ? foreignAmount / activeRate : 0;
 
-  // Handle currency change
   function handleCurrencyChange(code: string) {
     setSelectedCurrency(code);
     setAmountInput('');
@@ -81,7 +81,6 @@ export function ExchangePage({ push }: ExchangePageProps) {
     setDenomQtys([]);
   }
 
-  // Handle mode change
   function handleModeChange(mode: ClientMode) {
     setClientMode(mode);
     setDenomQtys([]);
@@ -92,7 +91,6 @@ export function ExchangePage({ push }: ExchangePageProps) {
   async function handleSubmitTransaction() {
     if (!selectedCurrency || !selectedRate || foreignAmount === 0) return;
 
-    // Build denominations map { "100": 4, "50": 2, ... } for the API
     const denomsMap: Record<string, number> = {};
     denomQtys.filter((q) => q.quantity > 0).forEach((q) => {
       denomsMap[String(q.value)] = q.quantity;
@@ -115,7 +113,6 @@ export function ExchangePage({ push }: ExchangePageProps) {
         throw new Error(err.error || err.message || `HTTP ${res.status}`);
       }
       const raw = await res.json();
-      // Transform snake_case API response to camelCase TransactionResponse
       const txn: TransactionResponse = {
         transactionId: raw.transaction_id,
         type: raw.type,
@@ -147,14 +144,16 @@ export function ExchangePage({ push }: ExchangePageProps) {
     setClientMode('buy');
   }
 
+  const popularChips = POPULAR_CURRENCIES.filter(code => rates.some(r => r.code === code));
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-200">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
-              ₵
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
+              <ArrowLeftRight className="w-4 h-4" />
             </div>
             <div>
               <h1 className="text-base font-bold text-gray-900 dark:text-white leading-tight">Bureau Exchange</h1>
@@ -165,53 +164,48 @@ export function ExchangePage({ push }: ExchangePageProps) {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-5">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-5">
         {/* Error banner */}
         {ratesError && (
           <div className="rounded-xl bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
-            <span className="font-bold">!</span>
+            <AlertCircle className="w-4 h-4 shrink-0" />
             Failed to load rates: {ratesError}. Retrying…
           </div>
         )}
 
-        {/* Step 1: Buy / Sell toggle */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
-          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-            I want to…
-          </h2>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleModeChange('buy')}
-              className={`flex flex-col items-center gap-1.5 px-4 py-4 rounded-xl border-2 transition-all font-medium text-sm ${
-                clientMode === 'buy'
-                  ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
-                  : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
-            >
-              <span className="text-2xl">💵</span>
-              <span className="font-semibold">Buy Foreign Currency</span>
-              <span className="text-xs opacity-70">Pay CAD, receive foreign</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleModeChange('sell')}
-              className={`flex flex-col items-center gap-1.5 px-4 py-4 rounded-xl border-2 transition-all font-medium text-sm ${
-                clientMode === 'sell'
-                  ? 'border-emerald-500 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
-                  : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
-            >
-              <span className="text-2xl">🏦</span>
-              <span className="font-semibold">Sell Foreign Currency</span>
-              <span className="text-xs opacity-70">Give foreign, receive CAD</span>
-            </button>
-          </div>
+        {/* Buy / Sell toggle — full-width side-by-side cards */}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => handleModeChange('buy')}
+            className={`flex flex-col items-center gap-2 px-4 py-5 rounded-2xl border-2 transition-all font-medium text-sm ${
+              clientMode === 'buy'
+                ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
+                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
+            }`}
+          >
+            <Banknote className="w-6 h-6" />
+            <span className="font-semibold">Buy Foreign Currency</span>
+            <span className="text-xs opacity-70">Pay CAD, receive foreign</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleModeChange('sell')}
+            className={`flex flex-col items-center gap-2 px-4 py-5 rounded-2xl border-2 transition-all font-medium text-sm ${
+              clientMode === 'sell'
+                ? 'border-emerald-500 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
+            }`}
+          >
+            <Building2 className="w-6 h-6" />
+            <span className="font-semibold">Sell Foreign Currency</span>
+            <span className="text-xs opacity-70">Give foreign, receive CAD</span>
+          </button>
         </div>
 
-        {/* Step 2: Currency selector */}
+        {/* Currency selector + quick-chips */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
-          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+          <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
             Select Currency
           </h2>
           {ratesLoading ? (
@@ -224,84 +218,98 @@ export function ExchangePage({ push }: ExchangePageProps) {
               placeholder="Search for a currency…"
             />
           )}
+
+          {/* Popular quick-select chips — shown when nothing is selected yet */}
+          {!selectedCurrency && !ratesLoading && popularChips.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 mt-3">
+              <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">Popular:</span>
+              {popularChips.map(code => (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => handleCurrencyChange(code)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 transition-all"
+                >
+                  <CurrencyFlag code={code} />
+                  {code}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Step 3: Rate display */}
-        {selectedRate && (
-          <div
-            style={{ animation: 'slideUp 0.2s ease-out' }}
-            className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5"
-          >
-            <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-              Exchange Rate
-            </h2>
-            <RateDisplay rate={selectedRate} secondsLeft={secondsLeft} mode={bureauMode} />
-          </div>
-        )}
-
-        {/* Step 4: Amount + Denominations */}
+        {/* Two-column section: Rate | Amount + Denominations */}
         {selectedCurrency && selectedRate && (
           <div
             style={{ animation: 'slideUp 0.2s ease-out' }}
-            className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-5"
+            className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start"
           >
-            {/* Manual amount input */}
-            <div>
-              <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                Amount ({selectedCurrency})
+            {/* Left column: Rate display */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+              <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                Exchange Rate
               </h2>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-400 dark:text-gray-500">
-                  {selectedCurrency}
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  step="any"
-                  value={amountInput}
-                  onChange={(e) => {
-                    setAmountInput(e.target.value);
-                    setDenomQtys([]); // clear denoms when typing manually
-                  }}
-                  placeholder="0.00"
-                  className="w-full pl-14 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-lg font-semibold outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600 transition-colors"
-                />
-              </div>
-              <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
-                Or use the denomination picker below to select exact bills/coins
-              </p>
+              <RateDisplay rate={selectedRate} secondsLeft={secondsLeft} mode={bureauMode} />
             </div>
 
-            {/* Denomination picker */}
-            {denomLoading ? (
-              <div className="grid grid-cols-3 gap-3">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="h-24 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
-                ))}
+            {/* Right column: Amount input + Denomination picker */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-5">
+              {/* Manual amount input */}
+              <div>
+                <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                  Amount ({selectedCurrency})
+                </h2>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-400 dark:text-gray-500">
+                    {selectedCurrency}
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={amountInput}
+                    onChange={(e) => {
+                      setAmountInput(e.target.value);
+                      setDenomQtys([]);
+                    }}
+                    placeholder="0.00"
+                    className="w-full pl-14 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-lg font-semibold outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600 transition-colors"
+                  />
+                </div>
+                <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+                  Or use the denomination picker below to select exact bills/coins
+                </p>
               </div>
-            ) : denomData && denomData.denominations.length > 0 ? (
-              <DenominationPicker
-                denominations={denomData.denominations}
-                quantities={denomQtys}
-                onChange={(qs) => {
-                  setDenomQtys(qs);
-                  // clear manual input when using denom picker
-                  if (qs.length > 0) setAmountInput('');
-                }}
-                mode={bureauMode}
-                currencyCode={selectedCurrency}
-              />
-            ) : null}
+
+              {/* Denomination picker */}
+              {denomLoading ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="h-24 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                  ))}
+                </div>
+              ) : denomData && denomData.denominations.length > 0 ? (
+                <DenominationPicker
+                  denominations={denomData.denominations}
+                  quantities={denomQtys}
+                  onChange={(qs) => {
+                    setDenomQtys(qs);
+                    if (qs.length > 0) setAmountInput('');
+                  }}
+                  mode={bureauMode}
+                  currencyCode={selectedCurrency}
+                />
+              ) : null}
+            </div>
           </div>
         )}
 
-        {/* Step 5: CAD total + Confirm */}
+        {/* CAD total + Confirm — full width */}
         {selectedCurrency && selectedRate && (
           <div
             style={{ animation: 'slideUp 0.25s ease-out' }}
             className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5"
           >
-            {/* Summary */}
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -319,8 +327,11 @@ export function ExchangePage({ push }: ExchangePageProps) {
                   </p>
                 )}
               </div>
-              <div className="text-4xl">
-                {clientMode === 'buy' ? '💵' : '🏦'}
+              <div className={`p-3 rounded-xl ${clientMode === 'buy' ? 'bg-blue-50 dark:bg-blue-950 text-blue-500' : 'bg-emerald-50 dark:bg-emerald-950 text-emerald-500'}`}>
+                {clientMode === 'buy'
+                  ? <Banknote className="w-8 h-8" />
+                  : <Building2 className="w-8 h-8" />
+                }
               </div>
             </div>
 

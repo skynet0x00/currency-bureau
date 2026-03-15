@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, type ReactElement } from 'react';
+import { Check, X, Info } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'info';
 export interface ToastMessage { id: string; type: ToastType; message: string; }
@@ -11,6 +12,12 @@ export function Toast({ toasts, onRemove }: { toasts: ToastMessage[]; onRemove: 
   );
 }
 
+const toastIcons: Record<ToastType, ReactElement> = {
+  success: <Check className="w-4 h-4 shrink-0" />,
+  error:   <X    className="w-4 h-4 shrink-0" />,
+  info:    <Info className="w-4 h-4 shrink-0" />,
+};
+
 function ToastItem({ toast, onRemove }: { toast: ToastMessage; onRemove: (id: string) => void }) {
   useEffect(() => {
     const id = setTimeout(() => onRemove(toast.id), 4000);
@@ -22,16 +29,17 @@ function ToastItem({ toast, onRemove }: { toast: ToastMessage; onRemove: (id: st
     error:   'bg-red-500 text-white',
     info:    'bg-blue-500 text-white',
   };
-  const icons: Record<ToastType, string> = { success: '✓', error: '✕', info: 'ℹ' };
 
   return (
     <div
       style={{ animation: 'slideUp 0.25s ease-out' }}
       className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium max-w-xs ${colors[toast.type]}`}
     >
-      <span className="font-bold">{icons[toast.type]}</span>
+      {toastIcons[toast.type]}
       <span className="flex-1">{toast.message}</span>
-      <button onClick={() => onRemove(toast.id)} className="opacity-75 hover:opacity-100 text-lg leading-none">×</button>
+      <button onClick={() => onRemove(toast.id)} className="opacity-75 hover:opacity-100 leading-none">
+        <X className="w-4 h-4" />
+      </button>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { Check, ArrowRight, Printer } from 'lucide-react';
 import type { TransactionResponse } from '../types';
 import { CurrencyFlag } from './CurrencyFlag';
 
@@ -38,8 +39,8 @@ export function Receipt({ transaction, onNewTransaction }: ReceiptProps) {
                 <p className="text-blue-200 text-xs font-medium uppercase tracking-wider">Transaction Receipt</p>
                 <h2 className="text-xl font-bold mt-0.5">Bureau Exchange</h2>
               </div>
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-2xl">
-                ✓
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                <Check className="w-6 h-6" />
               </div>
             </div>
           </div>
@@ -65,7 +66,7 @@ export function Receipt({ transaction, onNewTransaction }: ReceiptProps) {
                       {transaction.foreignAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} {transaction.currencyCode}
                     </div>
                   </div>
-                  <div className="text-gray-300 dark:text-gray-600 text-2xl">→</div>
+                  <ArrowRight className="w-6 h-6 text-gray-300 dark:text-gray-600 shrink-0" />
                   <div className="flex-1 text-center">
                     <div className="text-xs text-gray-400 dark:text-gray-500 mb-1">You received</div>
                     <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
@@ -81,7 +82,7 @@ export function Receipt({ transaction, onNewTransaction }: ReceiptProps) {
                       ${transaction.cadAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD
                     </div>
                   </div>
-                  <div className="text-gray-300 dark:text-gray-600 text-2xl">→</div>
+                  <ArrowRight className="w-6 h-6 text-gray-300 dark:text-gray-600 shrink-0" />
                   <div className="flex-1 text-center">
                     <div className="text-xs text-gray-400 dark:text-gray-500 mb-1">You received</div>
                     <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1.5">
@@ -126,9 +127,7 @@ export function Receipt({ transaction, onNewTransaction }: ReceiptProps) {
               onClick={handlePrint}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z" />
-              </svg>
+              <Printer className="w-4 h-4" />
               Print
             </button>
             <button

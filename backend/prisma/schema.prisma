@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Currency {
+  code      String  @id
+  name      String
+  flagEmoji String
+  isActive  Boolean @default(true)
+
+  exchangeRates ExchangeRate[]
+  tillInventory TillInventory[]
+  transactions  Transaction[]
+}
+
+model ExchangeRate {
+  id           Int      @id @default(autoincrement())
+  currencyCode String
+  buyRate      Float
+  sellRate     Float
+  marketRate   Float
+  fetchedAt    DateTime @default(now())
+
+  currency Currency @relation(fields: [currencyCode], references: [code])
+
+  @@index([currencyCode, fetchedAt])
+}
+
+model TillInventory {
+  id           Int      @id @default(autoincrement())
+  currencyCode String
+  denomination Float
+  quantity     Int      @default(0)
+  updatedAt    DateTime @updatedAt
+
+  currency Currency @relation(fields: [currencyCode], references: [code])
+
+  @@unique([currencyCode, denomination])
+}
+
+model BureauConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model Transaction {
+  id                String   @id @default(uuid())
+  type              String   // "buy" | "sell"
+  currencyCode      String
+  amountForeign     Float
+  amountCad         Float
+  rateUsed          Float
+  denominationsJson Json
+  createdAt         DateTime @default(now())
+
+  currency Currency @relation(fields: [currencyCode], references: [code])
+
+  @@index([createdAt])
+  @@index([currencyCode])
+}

@@ -1,0 +1,64 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     bureau_user
+      POSTGRES_PASSWORD: bureau_pass
+      POSTGRES_DB:       currency_bureau
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bureau_user -d currency_bureau"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL:     postgresql://bureau_user:bureau_pass@postgres:5432/currency_bureau
+      PORT:             3001
+      NODE_ENV:         production
+      CORS_ORIGIN:      http://localhost:5173
+      ADMIN_ORIGIN:     http://localhost:5174
+      RATE_TTL_SECONDS: 60
+      BUY_MARGIN:       0.985
+      SELL_MARGIN:      1.015
+      ADMIN_USER:       admin
+      ADMIN_PASS:       admin123
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  client-app:
+    build:
+      context: ./client-app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+  admin-app:
+    build:
+      context: ./admin-app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "5174:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

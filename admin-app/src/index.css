@@ -1,0 +1,16 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@keyframes fadeIn    { from { opacity: 0 } to { opacity: 1 } }
+@keyframes slideDown { from { transform: translateY(-8px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+@keyframes pulse     { 0%,100% { opacity: 1 } 50% { opacity: .5 } }
+
+@layer base {
+  html { -webkit-font-smoothing: antialiased; }
+  body { margin: 0; }
+  * { box-sizing: border-box; }
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+  .dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+}

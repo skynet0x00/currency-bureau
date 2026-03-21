@@ -1,5 +1,17 @@
 import { Router, Request, Response } from 'express';
+import prisma from '../db/client';
 import { getTillInventory, getTillSummary, restockTill } from '../services/tillService';
+
+function extractUsername(req: Request): string {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) return 'admin';
+  try {
+    const decoded = Buffer.from(auth.slice(7), 'base64').toString('utf8');
+    return decoded.replace(/:bureau-admin$/, '') || 'admin';
+  } catch {
+    return 'admin';
+  }
+}
 
 const router = Router();
 
@@ -93,8 +105,9 @@ router.put('/restock', async (req: Request, res: Response) => {
     }
   }
 
+  const performedBy = extractUsername(req);
   try {
-    await restockTill(currency.toUpperCase(), denominations);
+    await restockTill(currency.toUpperCase(), denominations, performedBy);
     const updated = await getTillInventory(currency.toUpperCase());
     res.json({
       message: `Till restocked for ${currency.toUpperCase()}`,
@@ -107,6 +120,29 @@ router.put('/restock', async (req: Request, res: Response) => {
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
+});
+
+router.get('/history', async (req: Request, res: Response) => {
+  const currency   = req.query.currency   as string | undefined;
+  const changeType = req.query.changeType as string | undefined;
+  const limit      = Math.min(parseInt((req.query.limit as string) ?? '200', 10), 500);
+  const offset     = parseInt((req.query.offset as string) ?? '0', 10);
+
+  const where: Record<string, unknown> = {};
+  if (currency)   where.currency   = currency.toUpperCase();
+  if (changeType) where.changeType = changeType.toUpperCase();
+
+  const [entries, total] = await Promise.all([
+    prisma.tillHistoryEntry.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip: offset,
+    }),
+    prisma.tillHistoryEntry.count({ where }),
+  ]);
+
+  res.json({ total, entries });
 });
 
 export default router;

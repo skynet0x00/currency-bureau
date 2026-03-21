@@ -4,6 +4,7 @@ import { useAuth } from './hooks/useAuth';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { TillPage } from './pages/TillPage';
+import { TillHistoryPage } from './pages/TillHistoryPage';
 import { RatesPage } from './pages/RatesPage';
 import { TransactionsPage } from './pages/TransactionsPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -37,6 +38,7 @@ export default function App() {
           <Route element={<Layout auth={auth} push={push} />}>
             <Route index element={<DashboardPage push={push} />} />
             <Route path="/till" element={<TillPage push={push} />} />
+            <Route path="/till-history" element={<TillHistoryPage />} />
             <Route path="/rates" element={<RatesPage push={push} />} />
             <Route path="/transactions" element={<TransactionsPage push={push} />} />
             <Route path="/settings" element={<SettingsPage push={push} />} />

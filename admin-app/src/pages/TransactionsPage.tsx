@@ -1,8 +1,64 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { CurrencyFlag } from '../components/CurrencyFlag';
 import { useOutletContext } from 'react-router-dom';
 import type { Transaction, Currency } from '../types';
 import type {ToastType} from '../components/Toast';
+
+const STORAGE_KEY = 'bureau_tx_col_widths';
+
+const DEFAULT_COL_WIDTHS: Record<string, number> = {
+  id:            160,
+  time:          140,
+  currency:      110,
+  type:           90,
+  foreignAmount: 160,
+  cadAmount:     140,
+  rate:          110,
+};
+
+function loadColWidths(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return { ...DEFAULT_COL_WIDTHS, ...JSON.parse(raw) };
+  } catch { /* ignore */ }
+  return { ...DEFAULT_COL_WIDTHS };
+}
+
+function saveColWidths(widths: Record<string, number>) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(widths)); } catch { /* ignore */ }
+}
+
+function useColumnResize(initialWidths: Record<string, number>) {
+  const [widths, setWidths] = useState(initialWidths);
+  const resizingRef = useRef<{ col: string; startX: number; startW: number } | null>(null);
+
+  const onMouseDown = useCallback((col: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    resizingRef.current = { col, startX: e.clientX, startW: widths[col] };
+
+    function onMove(me: MouseEvent) {
+      if (!resizingRef.current) return;
+      const delta = me.clientX - resizingRef.current.startX;
+      const newW  = Math.max(60, resizingRef.current.startW + delta);
+      setWidths(prev => {
+        const next = { ...prev, [resizingRef.current!.col]: newW };
+        saveColWidths(next);
+        return next;
+      });
+    }
+
+    function onUp() {
+      resizingRef.current = null;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [widths]);
+
+  return { widths, onMouseDown };
+}
 
 interface OutletCtx {
   push: (message: string, type?: ToastType) => void;
@@ -55,6 +111,8 @@ export function TransactionsPage({ push: pushProp }: TransactionsPageProps) {
   } catch {
     push = pushProp ?? (() => {});
   }
+
+  const { widths, onMouseDown } = useColumnResize(loadColWidths());
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [total, setTotal] = useState(0);
@@ -293,34 +351,56 @@ export function TransactionsPage({ push: pushProp }: TransactionsPageProps) {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="text-sm" style={{ tableLayout: 'fixed', width: Object.values(widths).reduce((a, b) => a + b, 0) }}>
+                <colgroup>
+                  <col style={{ width: widths.id }} />
+                  <col style={{ width: widths.time }} />
+                  <col style={{ width: widths.currency }} />
+                  <col style={{ width: widths.type }} />
+                  <col style={{ width: widths.foreignAmount }} />
+                  <col style={{ width: widths.cadAmount }} />
+                  <col style={{ width: widths.rate }} />
+                </colgroup>
                 <thead>
                   <tr className="text-left text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                    <th className="px-5 py-3 font-medium">ID</th>
-                    <th className="px-5 py-3 font-medium">Time</th>
-                    <th className="px-5 py-3 font-medium">Currency</th>
-                    <th className="px-5 py-3 font-medium">Type</th>
-                    <th className="px-5 py-3 font-medium text-right">Foreign Amount</th>
-                    <th className="px-5 py-3 font-medium text-right">CAD Amount</th>
-                    <th className="px-5 py-3 font-medium text-right">Rate</th>
+                    {(['id','time','currency','type','foreignAmount','cadAmount','rate'] as const).map((col, i) => {
+                      const labels: Record<string, string> = {
+                        id: 'ID', time: 'Time', currency: 'Currency', type: 'Type',
+                        foreignAmount: 'Foreign Amount', cadAmount: 'CAD Amount', rate: 'Rate',
+                      };
+                      const isRight = ['foreignAmount','cadAmount','rate'].includes(col);
+                      return (
+                        <th key={col} className={`px-5 py-3 font-medium relative select-none ${isRight ? 'text-right' : ''}`}
+                          style={{ width: widths[col], overflow: 'hidden' }}>
+                          {labels[col]}
+                          {i < 6 && (
+                            <div
+                              onMouseDown={(e) => onMouseDown(col, e)}
+                              className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-emerald-400 dark:hover:bg-emerald-600 transition-colors"
+                              style={{ userSelect: 'none' }}
+                            />
+                          )}
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {transactions.map(tx => (
                     <tr key={tx.id} className="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                      <td className="px-5 py-3 font-mono text-xs text-gray-400 dark:text-gray-500">
-                        {tx.id.slice(0, 8)}…
+                      <td className="px-5 py-3 font-mono text-xs text-gray-400 dark:text-gray-500 overflow-hidden text-ellipsis whitespace-nowrap">
+                        {tx.id.slice(0, 12)}
                       </td>
-                      <td className="px-5 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs">
+                      <td className="px-5 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs overflow-hidden text-ellipsis">
                         {formatTime(tx.created_at)}
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-5 py-3 overflow-hidden">
                         <span className="flex items-center gap-2 text-gray-900 dark:text-white font-medium">
                           <CurrencyFlag code={tx.currency_code} />
                           <span>{tx.currency_code}</span>
                         </span>
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-5 py-3 overflow-hidden">
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${
                           tx.transaction_type === 'buy'
                             ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400'
@@ -329,13 +409,13 @@ export function TransactionsPage({ push: pushProp }: TransactionsPageProps) {
                           {tx.transaction_type.toUpperCase()}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-right font-mono text-gray-900 dark:text-white">
+                      <td className="px-5 py-3 text-right font-mono text-gray-900 dark:text-white overflow-hidden text-ellipsis whitespace-nowrap">
                         {tx.amount_foreign.toLocaleString('en-CA', { maximumFractionDigits: 2 })} {tx.currency_code}
                       </td>
-                      <td className="px-5 py-3 text-right font-mono text-gray-900 dark:text-white">
+                      <td className="px-5 py-3 text-right font-mono text-gray-900 dark:text-white overflow-hidden text-ellipsis whitespace-nowrap">
                         {formatCAD(tx.amount_cad)}
                       </td>
-                      <td className="px-5 py-3 text-right font-mono text-xs text-gray-500 dark:text-gray-400">
+                      <td className="px-5 py-3 text-right font-mono text-xs text-gray-500 dark:text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap">
                         {tx.rate.toFixed(4)}
                       </td>
                     </tr>

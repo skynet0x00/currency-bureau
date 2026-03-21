@@ -1,0 +1,65 @@
+{
+  "header": {
+    "title": "Bureau Exchange",
+    "subtitle": "Currency Kiosk"
+  },
+  "mode": {
+    "buy": "Buy Foreign Currency",
+    "buyDesc": "Pay CAD, receive foreign",
+    "sell": "Sell Foreign Currency",
+    "sellDesc": "Give foreign, receive CAD"
+  },
+  "currency": {
+    "selectLabel": "Select Currency",
+    "searchPlaceholder": "Search for a currency…",
+    "popular": "Popular:"
+  },
+  "rate": {
+    "label": "Exchange Rate"
+  },
+  "amount": {
+    "label": "Amount ({{currency}})",
+    "placeholder": "0.00",
+    "orUsePicker": "Or use the denomination picker below to select exact bills/coins"
+  },
+  "total": {
+    "willPay": "You will pay",
+    "willReceive": "You will receive",
+    "formula": "{{amount}} {{currency}} ÷ {{rate}} = {{total}} CAD"
+  },
+  "button": {
+    "review": "Review Transaction",
+    "enterAmount": "Enter amount to continue"
+  },
+  "email": {
+    "title": "Receipt by Email",
+    "subtitle": "Enter your email to receive a confirmation receipt. This step is optional.",
+    "placeholder": "your@email.com",
+    "skip": "Skip / No receipt",
+    "continue": "Continue"
+  },
+  "confirm": {
+    "title": "Confirm Transaction",
+    "subtitle": "Please review the details before proceeding.",
+    "transaction": "Transaction",
+    "buyingLabel": "Buying Foreign Currency",
+    "sellingLabel": "Selling Foreign Currency",
+    "currency": "Currency",
+    "foreignAmount": "Foreign Amount",
+    "exchangeRate": "Exchange Rate",
+    "rateFormula": "1 CAD = {{rate}} {{currency}}",
+    "totalPay": "Total You Pay",
+    "totalReceive": "Total You Receive",
+    "cancel": "Cancel",
+    "submit": "Confirm & Submit",
+    "processing": "Processing…"
+  },
+  "receipt": {
+    "newTransaction": "New Transaction"
+  },
+  "error": {
+    "ratesFailed": "Failed to load rates: {{error}}. Retrying…",
+    "transactionFailed": "Transaction failed",
+    "completed": "Transaction completed successfully!"
+  }
+}

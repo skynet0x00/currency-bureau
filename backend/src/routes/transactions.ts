@@ -3,6 +3,7 @@ import prisma from '../db/client';
 import { getRateForCurrency } from '../services/rateService';
 import { checkTillSufficiency, deductFromTill, addToTill, DenominationMap } from '../services/tillService';
 import { emitTransaction, emitTillUpdated } from '../socket';
+import { sendReceiptEmail } from '../services/emailService';
 
 const router = Router();
 
@@ -11,6 +12,7 @@ interface TransactionBody {
   currency: string;
   amount_foreign: number;
   denominations: DenominationMap;
+  customer_email?: string;
 }
 
 /**
@@ -63,11 +65,32 @@ router.post('/', async (req: Request, res: Response) => {
     return;
   }
   const currencyCode = body.currency.toUpperCase();
-
-  if (!body.amount_foreign || body.amount_foreign <= 0) {
-    res.status(400).json({ error: 'amount_foreign must be a positive number' });
+  if (!/^[A-Z]{3}$/.test(currencyCode)) {
+    res.status(400).json({ error: 'currency must be a valid 3-letter ISO code' });
     return;
   }
+
+  const rawAmount = body.amount_foreign as number | undefined;
+  if (rawAmount === undefined || rawAmount === null || typeof rawAmount !== 'number' || isNaN(rawAmount)) {
+    res.status(400).json({ error: 'amount_foreign must be a numeric value' });
+    return;
+  }
+  if (rawAmount <= 0) {
+    res.status(400).json({ error: 'amount_foreign must be greater than zero' });
+    return;
+  }
+
+  // Enforce max transaction amount from config
+  const maxCfg = await prisma.bureauConfig.findUnique({ where: { key: 'max_transaction_amount' } });
+  const maxAmount = parseFloat(maxCfg?.value ?? '10000');
+  if (rawAmount > maxAmount) {
+    res.status(400).json({ error: `Transaction amount exceeds the maximum allowed limit of ${maxAmount}` });
+    return;
+  }
+
+  // Assign to body to keep downstream code happy
+  body.amount_foreign = rawAmount;
+
   if (!body.denominations || typeof body.denominations !== 'object') {
     res.status(400).json({ error: 'denominations object is required' });
     return;
@@ -187,6 +210,26 @@ router.post('/', async (req: Request, res: Response) => {
     emitTillUpdated({ currency: currencyCode, timestamp: new Date().toISOString() });
   } catch {
     // socket not initialized in test mode — ignore
+  }
+
+  // Fire receipt email async — never blocks the response
+  if (body.customer_email) {
+    const customerEmail = body.customer_email;
+    prisma.bureauConfig.findUnique({ where: { key: 'bureau_name' } }).then(cfg => {
+      const bureauName = cfg?.value ?? 'Bureau Exchange';
+      return sendReceiptEmail(customerEmail, {
+        transactionId: transaction.id,
+        currency:      currencyCode,
+        type:          body.type === 'buy' ? 'BUY' : 'SELL',
+        amount:        body.amount_foreign!,
+        rate:          rateUsed,
+        total:         amountCad,
+        timestamp:     transaction.createdAt,
+        bureauName,
+      });
+    }).catch(err => {
+      console.error('[email] Failed to send receipt email:', err);
+    });
   }
 
   res.json(responsePayload);

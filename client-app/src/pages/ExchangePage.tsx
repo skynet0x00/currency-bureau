@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Banknote, Building2, ArrowLeftRight, AlertCircle } from 'lucide-react';
 import type { Rate, TransactionResponse } from '../types';
 import { useRates } from '../hooks/useRates';
 import { useDenominations } from '../hooks/useDenominations';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { LanguageToggle } from '../components/LanguageToggle';
 import { CurrencyFlag } from '../components/CurrencyFlag';
 import { CurrencySelector } from '../components/CurrencySelector';
 import { RateDisplay } from '../components/RateDisplay';
@@ -25,9 +27,10 @@ function clientToBureauMode(clientMode: ClientMode): 'buy' | 'sell' {
   return clientMode === 'buy' ? 'sell' : 'buy';
 }
 
-const POPULAR_CURRENCIES = ['USD', 'EUR', 'GBP', 'MAD', 'AED', 'TND'];
+const POPULAR_CURRENCIES = ['USD', 'EUR', 'GBP', 'MAD', 'AED', 'NZD'];
 
 export function ExchangePage({ push }: ExchangePageProps) {
+  const { t } = useTranslation();
   const { rates, loading: ratesLoading, error: ratesError, secondsLeft } = useRates();
 
   const [clientMode, setClientMode] = useState<ClientMode>('buy');
@@ -38,6 +41,8 @@ export function ExchangePage({ push }: ExchangePageProps) {
   const [debouncedAmount, setDebouncedAmount] = useState(0);
   const [denomQtys, setDenomQtys] = useState<DenominationQty[]>([]);
 
+  const [emailPromptOpen, setEmailPromptOpen] = useState(false);
+  const [customerEmail, setCustomerEmail] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [completedTransaction, setCompletedTransaction] = useState<TransactionResponse | null>(null);
@@ -98,15 +103,18 @@ export function ExchangePage({ push }: ExchangePageProps) {
 
     setSubmitting(true);
     try {
+      const body: Record<string, unknown> = {
+        type: bureauMode,
+        currency: selectedCurrency,
+        amount_foreign: foreignAmount,
+        denominations: denomsMap,
+      };
+      if (customerEmail.trim()) body.customer_email = customerEmail.trim();
+
       const res = await fetch('/api/transaction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: bureauMode,
-          currency: selectedCurrency,
-          amount_foreign: foreignAmount,
-          denominations: denomsMap,
-        }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
@@ -142,6 +150,7 @@ export function ExchangePage({ push }: ExchangePageProps) {
     setDebouncedAmount(0);
     setDenomQtys([]);
     setClientMode('buy');
+    setCustomerEmail('');
   }
 
   const popularChips = POPULAR_CURRENCIES.filter(code => rates.some(r => r.code === code));
@@ -156,11 +165,14 @@ export function ExchangePage({ push }: ExchangePageProps) {
               <ArrowLeftRight className="w-4 h-4" />
             </div>
             <div>
-              <h1 className="text-base font-bold text-gray-900 dark:text-white leading-tight">Bureau Exchange</h1>
-              <p className="text-xs text-gray-400 dark:text-gray-500 leading-tight">Currency Kiosk</p>
+              <h1 className="text-base font-bold text-gray-900 dark:text-white leading-tight">{t('header.title')}</h1>
+              <p className="text-xs text-gray-400 dark:text-gray-500 leading-tight">{t('header.subtitle')}</p>
             </div>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <LanguageToggle />
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
@@ -169,7 +181,7 @@ export function ExchangePage({ push }: ExchangePageProps) {
         {ratesError && (
           <div className="rounded-xl bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
-            Failed to load rates: {ratesError}. Retrying…
+            {t('error.ratesFailed', { error: ratesError })}
           </div>
         )}
 
@@ -185,8 +197,8 @@ export function ExchangePage({ push }: ExchangePageProps) {
             }`}
           >
             <Banknote className="w-6 h-6" />
-            <span className="font-semibold">Buy Foreign Currency</span>
-            <span className="text-xs opacity-70">Pay CAD, receive foreign</span>
+            <span className="font-semibold">{t('mode.buy')}</span>
+            <span className="text-xs opacity-70">{t('mode.buyDesc')}</span>
           </button>
           <button
             type="button"
@@ -198,15 +210,15 @@ export function ExchangePage({ push }: ExchangePageProps) {
             }`}
           >
             <Building2 className="w-6 h-6" />
-            <span className="font-semibold">Sell Foreign Currency</span>
-            <span className="text-xs opacity-70">Give foreign, receive CAD</span>
+            <span className="font-semibold">{t('mode.sell')}</span>
+            <span className="text-xs opacity-70">{t('mode.sellDesc')}</span>
           </button>
         </div>
 
         {/* Currency selector + quick-chips */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
           <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-            Select Currency
+            {t('currency.selectLabel')}
           </h2>
           {ratesLoading ? (
             <div className="h-12 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
@@ -215,14 +227,14 @@ export function ExchangePage({ push }: ExchangePageProps) {
               rates={rates}
               value={selectedCurrency}
               onChange={handleCurrencyChange}
-              placeholder="Search for a currency…"
+              placeholder={t('currency.searchPlaceholder')}
             />
           )}
 
           {/* Popular quick-select chips — shown when nothing is selected yet */}
           {!selectedCurrency && !ratesLoading && popularChips.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 mt-3">
-              <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">Popular:</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">{t('currency.popular')}</span>
               {popularChips.map(code => (
                 <button
                   key={code}
@@ -247,7 +259,7 @@ export function ExchangePage({ push }: ExchangePageProps) {
             {/* Left column: Rate display */}
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
               <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                Exchange Rate
+                {t('rate.label')}
               </h2>
               <RateDisplay rate={selectedRate} secondsLeft={secondsLeft} mode={bureauMode} />
             </div>
@@ -257,7 +269,7 @@ export function ExchangePage({ push }: ExchangePageProps) {
               {/* Manual amount input */}
               <div>
                 <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                  Amount ({selectedCurrency})
+                  {t('amount.label', { currency: selectedCurrency })}
                 </h2>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-400 dark:text-gray-500">
@@ -277,7 +289,7 @@ export function ExchangePage({ push }: ExchangePageProps) {
                   />
                 </div>
                 <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
-                  Or use the denomination picker below to select exact bills/coins
+                  {t('amount.orUsePicker')}
                 </p>
               </div>
 
@@ -313,7 +325,7 @@ export function ExchangePage({ push }: ExchangePageProps) {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {clientMode === 'buy' ? 'You will pay' : 'You will receive'}
+                  {clientMode === 'buy' ? t('total.willPay') : t('total.willReceive')}
                 </p>
                 <p className="text-3xl font-bold text-gray-900 dark:text-white mt-0.5">
                   {foreignAmount > 0
@@ -337,15 +349,53 @@ export function ExchangePage({ push }: ExchangePageProps) {
 
             <button
               type="button"
-              onClick={() => setConfirmOpen(true)}
+              onClick={() => setEmailPromptOpen(true)}
               disabled={!canConfirm}
               className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-semibold text-base transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {canConfirm ? 'Review Transaction' : 'Enter amount to continue'}
+              {canConfirm ? t('button.review') : t('button.enterAmount')}
             </button>
           </div>
         )}
       </main>
+
+      {/* Email prompt modal */}
+      {emailPromptOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/50 dark:bg-black/70">
+          <div
+            style={{ animation: 'slideUp 0.2s ease-out' }}
+            className="w-full sm:max-w-md bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl p-6 shadow-2xl"
+          >
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{t('email.title')}</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+              {t('email.subtitle')}
+            </p>
+            <input
+              type="email"
+              value={customerEmail}
+              onChange={(e) => setCustomerEmail(e.target.value)}
+              placeholder={t('email.placeholder')}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600 transition-colors mb-4"
+            />
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => { setCustomerEmail(''); setEmailPromptOpen(false); setConfirmOpen(true); }}
+                className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
+              >
+                {t('email.skip')}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setEmailPromptOpen(false); setConfirmOpen(true); }}
+                className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-semibold transition-colors text-sm"
+              >
+                {t('email.continue')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirmation modal */}
       {confirmOpen && selectedRate && (
@@ -354,17 +404,17 @@ export function ExchangePage({ push }: ExchangePageProps) {
             style={{ animation: 'slideUp 0.2s ease-out' }}
             className="w-full sm:max-w-md bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl p-6 shadow-2xl"
           >
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Confirm Transaction</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">Please review the details before proceeding.</p>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{t('confirm.title')}</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">{t('confirm.subtitle')}</p>
 
             <div className="space-y-3 mb-6">
-              <ConfirmRow label="Transaction" value={clientMode === 'buy' ? 'Buying Foreign Currency' : 'Selling Foreign Currency'} />
-              <ConfirmRow label="Currency" value={<span className="flex items-center gap-1.5"><CurrencyFlag code={selectedRate.code} /> {selectedRate.code} — {selectedRate.name}</span>} />
-              <ConfirmRow label="Foreign Amount" value={`${foreignAmount.toLocaleString()} ${selectedCurrency}`} />
-              <ConfirmRow label="Exchange Rate" value={`1 CAD = ${activeRate.toFixed(4)} ${selectedCurrency}`} />
+              <ConfirmRow label={t('confirm.transaction')} value={clientMode === 'buy' ? t('confirm.buyingLabel') : t('confirm.sellingLabel')} />
+              <ConfirmRow label={t('confirm.currency')} value={<span className="flex items-center gap-1.5"><CurrencyFlag code={selectedRate.code} /> {selectedRate.code} — {selectedRate.name}</span>} />
+              <ConfirmRow label={t('confirm.foreignAmount')} value={`${foreignAmount.toLocaleString()} ${selectedCurrency}`} />
+              <ConfirmRow label={t('confirm.exchangeRate')} value={t('confirm.rateFormula', { rate: activeRate.toFixed(4), currency: selectedCurrency })} />
               <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
                 <ConfirmRow
-                  label={clientMode === 'buy' ? 'Total You Pay' : 'Total You Receive'}
+                  label={clientMode === 'buy' ? t('confirm.totalPay') : t('confirm.totalReceive')}
                   value={`$${cadTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`}
                   highlight
                 />
@@ -378,7 +428,7 @@ export function ExchangePage({ push }: ExchangePageProps) {
                 disabled={submitting}
                 className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
               >
-                Cancel
+                {t('confirm.cancel')}
               </button>
               <button
                 type="button"
@@ -392,10 +442,10 @@ export function ExchangePage({ push }: ExchangePageProps) {
                       className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
                       style={{ animation: 'spin 0.7s linear infinite' }}
                     />
-                    Processing…
+                    {t('confirm.processing')}
                   </>
                 ) : (
-                  'Confirm & Submit'
+                  t('confirm.submit')
                 )}
               </button>
             </div>

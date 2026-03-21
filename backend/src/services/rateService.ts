@@ -10,21 +10,23 @@ const SELL_MARGIN = parseFloat(process.env.SELL_MARGIN ?? '1.015'); // bureau se
 
 export const SUPPORTED_CURRENCIES = [
   'USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CNY',
-  'MAD', 'TND', 'DZD', 'SAR', 'AED', 'QAR', 'KWD',
+  'MAD', 'SAR', 'AED', 'QAR', 'KWD',
   'TRY', 'MXN', 'INR', 'BRL', 'AUD', 'HKD', 'SGD',
+  'NZD', 'DOP', 'XCD', 'CUP',
 ];
 
 // Currencies not available on Frankfurter — approximate rates vs CAD.
 // These are updated semi-manually; the fallback keeps the app functional
 // even when the primary API doesn't cover a currency.
 const FALLBACK_RATES_VS_CAD: Record<string, number> = {
-  MAD: 10.20,  // Moroccan Dirham
-  TND:  2.45,  // Tunisian Dinar
-  DZD: 108.50, // Algerian Dinar
-  SAR:  2.81,  // Saudi Riyal
-  AED:  2.74,  // UAE Dirham
-  QAR:  2.73,  // Qatari Riyal
-  KWD:  0.228, // Kuwaiti Dinar
+  MAD:  10.20, // Moroccan Dirham
+  SAR:   2.81, // Saudi Riyal
+  AED:   2.74, // UAE Dirham
+  QAR:   2.73, // Qatari Riyal
+  KWD:   0.228, // Kuwaiti Dinar
+  DOP:  59.00, // Dominican Peso
+  XCD:   2.02, // Eastern Caribbean Dollar
+  CUP:  33.00, // Cuban Peso (official rate)
 };
 
 interface FrankfurterResponse {

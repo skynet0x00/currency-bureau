@@ -3,7 +3,7 @@ import prisma from '../db/client';
 
 const router = Router();
 
-const ALLOWED_KEYS = ['buy_margin', 'sell_margin', 'rate_ttl_seconds'];
+const ALLOWED_KEYS = ['buy_margin', 'sell_margin', 'rate_ttl_seconds', 'max_transaction_amount', 'bureau_name'];
 
 /**
  * @openapi
@@ -20,9 +20,11 @@ router.get('/', async (_req: Request, res: Response) => {
   const config: Record<string, string> = {};
 
   // Defaults from env (what's in DB overrides)
-  config.buy_margin        = process.env.BUY_MARGIN        ?? '0.985';
-  config.sell_margin       = process.env.SELL_MARGIN       ?? '1.015';
-  config.rate_ttl_seconds  = process.env.RATE_TTL_SECONDS  ?? '60';
+  config.buy_margin              = process.env.BUY_MARGIN        ?? '0.985';
+  config.sell_margin             = process.env.SELL_MARGIN       ?? '1.015';
+  config.rate_ttl_seconds        = process.env.RATE_TTL_SECONDS  ?? '60';
+  config.max_transaction_amount  = '10000';
+  config.bureau_name             = 'Bureau Exchange';
 
   for (const row of rows) {
     config[row.key] = row.value;
@@ -51,6 +53,13 @@ router.put('/', async (req: Request, res: Response) => {
     if (!ALLOWED_KEYS.includes(key)) {
       res.status(400).json({ error: `Unknown config key: ${key}` });
       return;
+    }
+    if (key === 'bureau_name') {
+      if (!value || typeof value !== 'string' || value.trim().length === 0) {
+        res.status(400).json({ error: 'bureau_name must be a non-empty string' });
+        return;
+      }
+      continue;
     }
     const num = parseFloat(value);
     if (isNaN(num) || num <= 0) {

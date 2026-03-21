@@ -1,0 +1,65 @@
+{
+  "header": {
+    "title": "Bureau de Change",
+    "subtitle": "Kiosque de devises"
+  },
+  "mode": {
+    "buy": "Acheter des devises étrangères",
+    "buyDesc": "Payez en CAD, recevez en devises",
+    "sell": "Vendre des devises étrangères",
+    "sellDesc": "Donnez des devises, recevez en CAD"
+  },
+  "currency": {
+    "selectLabel": "Choisir une devise",
+    "searchPlaceholder": "Rechercher une devise…",
+    "popular": "Populaires :"
+  },
+  "rate": {
+    "label": "Taux de change"
+  },
+  "amount": {
+    "label": "Montant ({{currency}})",
+    "placeholder": "0,00",
+    "orUsePicker": "Ou utilisez le sélecteur de coupures ci-dessous"
+  },
+  "total": {
+    "willPay": "Vous paierez",
+    "willReceive": "Vous recevrez",
+    "formula": "{{amount}} {{currency}} ÷ {{rate}} = {{total}} CAD"
+  },
+  "button": {
+    "review": "Réviser la transaction",
+    "enterAmount": "Entrez un montant pour continuer"
+  },
+  "email": {
+    "title": "Reçu par courriel",
+    "subtitle": "Entrez votre courriel pour recevoir un reçu de confirmation. Cette étape est facultative.",
+    "placeholder": "votre@courriel.com",
+    "skip": "Ignorer / Sans reçu",
+    "continue": "Continuer"
+  },
+  "confirm": {
+    "title": "Confirmer la transaction",
+    "subtitle": "Veuillez vérifier les détails avant de procéder.",
+    "transaction": "Transaction",
+    "buyingLabel": "Achat de devises étrangères",
+    "sellingLabel": "Vente de devises étrangères",
+    "currency": "Devise",
+    "foreignAmount": "Montant en devises",
+    "exchangeRate": "Taux de change",
+    "rateFormula": "1 CAD = {{rate}} {{currency}}",
+    "totalPay": "Total à payer",
+    "totalReceive": "Total à recevoir",
+    "cancel": "Annuler",
+    "submit": "Confirmer et soumettre",
+    "processing": "Traitement en cours…"
+  },
+  "receipt": {
+    "newTransaction": "Nouvelle transaction"
+  },
+  "error": {
+    "ratesFailed": "Échec du chargement des taux : {{error}}. Nouvelle tentative…",
+    "transactionFailed": "Échec de la transaction",
+    "completed": "Transaction effectuée avec succès !"
+  }
+}

@@ -59,13 +59,30 @@ export async function checkTillSufficiency(
 export async function deductFromTill(
   tx: typeof prisma,
   currencyCode: string,
-  denominations: DenominationMap
+  denominations: DenominationMap,
+  performedBy = 'system'
 ) {
   for (const [denomStr, qty] of Object.entries(denominations)) {
     const denom = parseFloat(denomStr);
+    const before = await (tx as any).tillInventory.findUnique({
+      where: { currencyCode_denomination: { currencyCode, denomination: denom } },
+    });
+    const quantityBefore = before?.quantity ?? 0;
     await (tx as any).tillInventory.update({
       where: { currencyCode_denomination: { currencyCode, denomination: denom } },
       data: { quantity: { decrement: qty } },
+    });
+    await (tx as any).tillHistoryEntry.create({
+      data: {
+        currency:      currencyCode,
+        changeType:    'WITHDRAWAL',
+        denomination:  denom,
+        quantityBefore,
+        quantityAfter: quantityBefore - qty,
+        quantityDelta: -qty,
+        performedBy,
+        note: 'Transaction sell',
+      },
     });
   }
 }
@@ -77,14 +94,31 @@ export async function deductFromTill(
 export async function addToTill(
   tx: typeof prisma,
   currencyCode: string,
-  denominations: DenominationMap
+  denominations: DenominationMap,
+  performedBy = 'system'
 ) {
   for (const [denomStr, qty] of Object.entries(denominations)) {
     const denom = parseFloat(denomStr);
+    const before = await (tx as any).tillInventory.findUnique({
+      where: { currencyCode_denomination: { currencyCode, denomination: denom } },
+    });
+    const quantityBefore = before?.quantity ?? 0;
     await (tx as any).tillInventory.upsert({
       where: { currencyCode_denomination: { currencyCode, denomination: denom } },
       update: { quantity: { increment: qty } },
       create: { currencyCode, denomination: denom, quantity: qty },
+    });
+    await (tx as any).tillHistoryEntry.create({
+      data: {
+        currency:      currencyCode,
+        changeType:    'DEPOSIT',
+        denomination:  denom,
+        quantityBefore,
+        quantityAfter: quantityBefore + qty,
+        quantityDelta: qty,
+        performedBy,
+        note: 'Transaction buy',
+      },
     });
   }
 }
@@ -94,17 +128,33 @@ export async function addToTill(
  */
 export async function restockTill(
   currencyCode: string,
-  denominations: DenominationMap
+  denominations: DenominationMap,
+  performedBy = 'admin'
 ): Promise<void> {
-  const ops = Object.entries(denominations).map(([denomStr, qty]) => {
+  for (const [denomStr, qty] of Object.entries(denominations)) {
     const denom = parseFloat(denomStr);
-    return prisma.tillInventory.upsert({
+    const before = await prisma.tillInventory.findUnique({
+      where: { currencyCode_denomination: { currencyCode, denomination: denom } },
+    });
+    const quantityBefore = before?.quantity ?? 0;
+    await prisma.tillInventory.upsert({
       where: { currencyCode_denomination: { currencyCode, denomination: denom } },
       update: { quantity: qty },
       create: { currencyCode, denomination: denom, quantity: qty },
     });
-  });
-  await prisma.$transaction(ops);
+    await prisma.tillHistoryEntry.create({
+      data: {
+        currency:      currencyCode,
+        changeType:    'ADJUSTMENT',
+        denomination:  denom,
+        quantityBefore,
+        quantityAfter: qty,
+        quantityDelta: qty - quantityBefore,
+        performedBy,
+        note: 'Manual restock',
+      },
+    });
+  }
 }
 
 /**

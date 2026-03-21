@@ -10,8 +10,6 @@ const CURRENCIES = [
   { code: 'JPY', name: 'Japanese Yen',          flagEmoji: '🇯🇵' },
   { code: 'CNY', name: 'Chinese Yuan',          flagEmoji: '🇨🇳' },
   { code: 'MAD', name: 'Moroccan Dirham',       flagEmoji: '🇲🇦' },
-  { code: 'TND', name: 'Tunisian Dinar',        flagEmoji: '🇹🇳' },
-  { code: 'DZD', name: 'Algerian Dinar',        flagEmoji: '🇩🇿' },
   { code: 'SAR', name: 'Saudi Riyal',           flagEmoji: '🇸🇦' },
   { code: 'AED', name: 'UAE Dirham',            flagEmoji: '🇦🇪' },
   { code: 'QAR', name: 'Qatari Riyal',          flagEmoji: '🇶🇦' },
@@ -23,6 +21,10 @@ const CURRENCIES = [
   { code: 'AUD', name: 'Australian Dollar',     flagEmoji: '🇦🇺' },
   { code: 'HKD', name: 'Hong Kong Dollar',      flagEmoji: '🇭🇰' },
   { code: 'SGD', name: 'Singapore Dollar',      flagEmoji: '🇸🇬' },
+  { code: 'NZD', name: 'New Zealand Dollar',    flagEmoji: '🇳🇿' },
+  { code: 'DOP', name: 'Dominican Peso',        flagEmoji: '🇩🇴' },
+  { code: 'XCD', name: 'Eastern Caribbean Dollar', flagEmoji: '🏝️' },
+  { code: 'CUP', name: 'Cuban Peso',            flagEmoji: '🇨🇺' },
 ];
 
 // Denominations (bills) per currency — realistic for an exchange bureau
@@ -34,8 +36,6 @@ const DENOMINATIONS: Record<string, number[]> = {
   JPY: [1000, 2000, 5000, 10000],
   CNY: [1, 5, 10, 20, 50, 100],
   MAD: [20, 50, 100, 200],
-  TND: [5, 10, 20, 50],
-  DZD: [200, 500, 1000, 2000],
   SAR: [1, 5, 10, 50, 100, 500],
   AED: [5, 10, 20, 50, 100, 200, 500, 1000],
   QAR: [1, 5, 10, 50, 100, 500],
@@ -47,6 +47,10 @@ const DENOMINATIONS: Record<string, number[]> = {
   AUD: [5, 10, 20, 50, 100],
   HKD: [10, 20, 50, 100, 500, 1000],
   SGD: [2, 5, 10, 50, 100, 1000],
+  NZD: [5, 10, 20, 50, 100],
+  DOP: [50, 100, 200, 500, 1000, 2000],
+  XCD: [5, 10, 20, 50, 100],
+  CUP: [1, 3, 5, 10, 20, 50, 100],
 };
 
 // Seed quantities — realistic starting stock for a bureau

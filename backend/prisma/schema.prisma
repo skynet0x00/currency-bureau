@@ -64,3 +64,19 @@ model Transaction {
   @@index([createdAt])
   @@index([currencyCode])
 }
+
+model TillHistoryEntry {
+  id               Int      @id @default(autoincrement())
+  currency         String
+  changeType       String   // "DEPOSIT" | "WITHDRAWAL" | "ADJUSTMENT"
+  denomination     Float?
+  quantityBefore   Int
+  quantityAfter    Int
+  quantityDelta    Int
+  performedBy      String
+  note             String?
+  createdAt        DateTime @default(now())
+
+  @@index([currency])
+  @@index([createdAt])
+}

@@ -183,13 +183,15 @@ async function enrichWithCurrency(
   const currencies = await prisma.currency.findMany({ where: { isActive: true } });
   const currMap = Object.fromEntries(currencies.map((c) => [c.code, c]));
 
-  return rows.map((r) => ({
-    currency_code: r.currency_code,
-    name:          currMap[r.currency_code]?.name      ?? r.currency_code,
-    flag_emoji:    currMap[r.currency_code]?.flagEmoji ?? '',
-    buy_rate:      r.buy_rate,
-    sell_rate:     r.sell_rate,
-    market_rate:   r.market_rate,
-    last_updated:  r.fetched_at,
-  }));
+  return rows
+    .filter((r) => currMap[r.currency_code]) // skip inactive / removed currencies
+    .map((r) => ({
+      currency_code: r.currency_code,
+      name:          currMap[r.currency_code].name,
+      flag_emoji:    currMap[r.currency_code].flagEmoji,
+      buy_rate:      r.buy_rate,
+      sell_rate:     r.sell_rate,
+      market_rate:   r.market_rate,
+      last_updated:  r.fetched_at,
+    }));
 }

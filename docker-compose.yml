@@ -36,6 +36,8 @@ services:
       SELL_MARGIN:      1.015
       ADMIN_USER:       admin
       ADMIN_PASS:       admin123
+      RESEND_API_KEY:   re_3M1vDZWt_M2sgZTQTdtostaa9csd3gkyY
+      FROM_EMAIL:       onboarding@resend.dev
     depends_on:
       postgres:
         condition: service_healthy

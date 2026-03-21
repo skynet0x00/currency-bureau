@@ -84,13 +84,6 @@ export function TillPage({ push: pushProp }: TillPageProps) {
 
   useEffect(() => { fetchTill(); }, [fetchTill]);
 
-  useEffect(() => {
-    if (edit && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [edit]);
-
   // Focus search on mount
   useEffect(() => {
     if (!loading && !selectedCode && searchRef.current) {

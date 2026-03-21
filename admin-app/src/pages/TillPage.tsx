@@ -160,22 +160,7 @@ export function TillPage({ push: pushProp }: TillPageProps) {
 
   const selectedEntry = selectedCode ? till.find(e => e.currency_code === selectedCode) ?? null : null;
 
-  // ── Loading skeleton ───────────────────────────────────────────────────────
-
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="h-11 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-14 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl animate-pulse" />
-        ))}
-      </div>
-    );
-  }
-
-  // ── Detail view (currency selected) ───────────────────────────────────────
-
-  // Sorted denominations — stable reference for keyboard nav
+  // Sorted denominations — stable reference for keyboard nav (must be before any early return)
   const sortedDenoms = useMemo(
     () => selectedEntry?.denominations.slice().sort((a, b) => b.denomination - a.denomination) ?? [],
     [selectedEntry]
@@ -197,6 +182,21 @@ export function TillPage({ push: pushProp }: TillPageProps) {
       inputRef.current.select();
     }
   }, [edit]);
+
+  // ── Loading skeleton ───────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="h-11 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-14 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  // ── Detail view (currency selected) ───────────────────────────────────────
 
   function moveFocus(direction: 1 | -1) {
     if (!selectedEntry) return;

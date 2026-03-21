@@ -78,15 +78,9 @@ export function DenominationPicker({ denominations, quantities, onChange, mode, 
                   </span>
                   <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">{currencyCode}</span>
                 </div>
-                {mode === 'sell' && (
-                  <span className={`text-xs px-1.5 py-0.5 rounded-md font-medium ${
-                    denom.availableInTill === 0
-                      ? 'bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-400'
-                      : denom.availableInTill <= 5
-                      ? 'bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
-                  }`}>
-                    {denom.availableInTill === 0 ? 'Out' : `×${denom.availableInTill}`}
+                {mode === 'sell' && denom.availableInTill === 0 && (
+                  <span className="text-xs px-1.5 py-0.5 rounded-md font-medium bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-400">
+                    Out
                   </span>
                 )}
               </div>

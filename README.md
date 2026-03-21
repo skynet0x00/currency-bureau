@@ -1,14 +1,11 @@
 # Bureau Exchange
 
-[![CI](https://github.com/skynet0x00/currency-bureau/actions/workflows/ci.yml/badge.svg)](https://github.com/skynet0x00/currency-bureau/actions/workflows/ci.yml)
-[![CD](https://github.com/skynet0x00/currency-bureau/actions/workflows/cd.yml/badge.svg)](https://github.com/skynet0x00/currency-bureau/actions/workflows/cd.yml)
-[![Docker](https://img.shields.io/badge/ghcr.io-skynet0x00-blue?logo=docker&logoColor=white)](https://github.com/skynet0x00?tab=packages&repo_name=currency-bureau)
-[![Dependabot](https://img.shields.io/badge/dependabot-enabled-025E8C?logo=dependabot&logoColor=white)](https://github.com/skynet0x00/currency-bureau/network/updates)
+[![CI](https://github.com/FaresMajdoub/currency-bureau/actions/workflows/ci.yml/badge.svg)](https://github.com/FaresMajdoub/currency-bureau/actions/workflows/ci.yml)
+[![Docker](https://img.shields.io/badge/docker-compose-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A production-grade currency exchange bureau web application — live rates, till management, transaction engine, and a real-time admin dashboard.
-
+A production-grade currency exchange bureau web application — live rates, till management, transaction engine, email receipts, and a real-time admin dashboard.
 
 ---
 
@@ -23,11 +20,12 @@ A production-grade currency exchange bureau web application — live rates, till
 │  │  Public kiosk UI           │   │   Operator dashboard         │   │
 │  │  · Currency selector       │   │   · Live transaction feed    │   │
 │  │  · Denomination picker     │   │   · Till inline editing      │   │
-│  │  · CAD preview             │   │   · Rate monitor             │   │
-│  │  · Transaction receipt     │   │   · Transaction history+CSV  │   │
-│  │                            │   │   · Settings (margins/TTL)   │   │
+│  │  · CAD preview             │   │   · Till history log         │   │
+│  │  · Email receipt prompt    │   │   · Rate monitor             │   │
+│  │  · EN / FR language toggle │   │   · Transaction history+CSV  │   │
+│  │  · Dark / light theme      │   │   · Settings (margins/TTL)   │   │
 │  └────────────┬───────────────┘   └──────────────┬───────────────┘   │
-│               │  React + Vite + Tailwind CSS v4   │                   │
+│               │  React 19 + Vite 8 + Tailwind CSS v4                  │
 └───────────────┼──────────────────────────────────┼───────────────────┘
                 │         HTTP/JSON + WebSocket      │
                 ▼                                   ▼
@@ -40,6 +38,7 @@ A production-grade currency exchange bureau web application — live rates, till
 │  GET  /api/currencies/:code/denominations                            │
 │  GET  /api/till                  ← inventory snapshot + summary      │
 │  PUT  /api/till/restock          ← set denomination quantities       │
+│  GET  /api/till/history          ← audit log of all till changes     │
 │  GET  /api/transaction           ← history (up to 500)              │
 │  POST /api/transaction           ← process buy / sell               │
 │  POST /api/auth/login            ← admin login                       │
@@ -52,19 +51,38 @@ A production-grade currency exchange bureau web application — live rates, till
 │    → rates:updated               ← broadcast on rate refresh         │
 │    → till:updated                ← broadcast on till change          │
 │    ← admin:restock               ← admin sends to trigger restock    │
-└──────────────────────────┬───────────────────────────────────────────┘
-                           │  Prisma ORM
-                           ▼
+└──────────────────────┬───────────────────────────────────────────────┘
+                       │  Prisma ORM
+                       ▼
 ┌──────────────────────────────────────────────────────────────────────┐
 │                   PostgreSQL 17  (port 5432)                          │
 │                                                                       │
-│  currencies      exchange_rates       till_inventory   transactions   │
+│  currencies   exchange_rates   till_inventory   transactions          │
+│  till_history_entries                                                 │
 └──────────────────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-         https://api.frankfurter.app  (no API key needed)
-         13 / 20 currencies live — 7 fallback hardcoded rates
+                       │
+                       ▼
+     https://api.frankfurter.app  (no API key needed)
+     14 / 22 currencies live — 8 fallback hardcoded rates
+
+     https://resend.com  (optional — email receipts)
 ```
+
+---
+
+## Quick Start — Docker (recommended)
+
+```bash
+git clone https://github.com/FaresMajdoub/currency-bureau.git
+cd currency-bureau
+docker compose up --build
+```
+
+| URL | Description |
+|---|---|
+| http://localhost:5173 | Customer kiosk |
+| http://localhost:5174 | Admin dashboard (login: `admin` / `admin123`) |
+| http://localhost:3001/api/docs | Swagger UI |
 
 ---
 
@@ -75,9 +93,6 @@ A production-grade currency exchange bureau web application — live rates, till
 ### 1 — PostgreSQL setup (first time only)
 
 ```bash
-brew install postgresql@17
-brew services start postgresql@17
-
 psql -U $(whoami) postgres -c "CREATE DATABASE currency_bureau;"
 psql -U $(whoami) postgres -c "CREATE USER bureau_user WITH PASSWORD 'bureau_pass';"
 psql -U $(whoami) postgres -c "GRANT ALL PRIVILEGES ON DATABASE currency_bureau TO bureau_user;"
@@ -112,25 +127,6 @@ npm install
 npm run dev                  # → http://localhost:5174
 ```
 
-Then open:
-
-| URL | Description |
-|---|---|
-| http://localhost:5173 | Customer kiosk |
-| http://localhost:5174 | Admin dashboard (login: `admin` / `admin123`) |
-| http://localhost:3001/api/docs | Swagger UI |
-
----
-
-## Quick Start — Docker
-
-```bash
-git clone https://github.com/skynet0x00/currency-bureau.git
-cd currency-bureau
-cp .env.example .env
-docker-compose up --build
-```
-
 ---
 
 ## Environment Variables
@@ -145,31 +141,56 @@ docker-compose up --build
 | `ADMIN_USER` | `admin` | Admin login username |
 | `ADMIN_PASS` | `admin123` | Admin login password |
 | `RATE_TTL_SECONDS` | `60` | Rate cache duration in seconds |
-| `BUY_MARGIN` | `0.985` | Multiplier on market rate when bureau buys foreign |
-| `SELL_MARGIN` | `1.015` | Multiplier on market rate when bureau sells foreign |
+| `BUY_MARGIN` | `0.985` | Multiplier applied when bureau buys foreign currency |
+| `SELL_MARGIN` | `1.015` | Multiplier applied when bureau sells foreign currency |
+| `RESEND_API_KEY` | *(optional)* | Resend API key — enables email receipts |
+| `FROM_EMAIL` | `onboarding@resend.dev` | Sender address for email receipts |
+
+---
+
+## Features
+
+### Customer Kiosk (`client-app`)
+- Live exchange rates refreshed every 60 s
+- Denomination-level picker — shows "Out" badge when a denomination is unavailable
+- CAD total preview before confirming
+- Optional email receipt sent via Resend after each transaction
+- EN / FR language toggle (persisted to `localStorage`)
+- Dark / light theme toggle
+
+### Admin Dashboard (`admin-app`)
+- Real-time transaction feed over WebSocket
+- Till inventory — keyboard-navigable table, inline quantity editing (↑ ↓ arrows, Enter to save)
+- Till history — full audit log of every deposit, withdrawal, and adjustment with `performedBy` tracking
+- Exchange rate monitor with force-refresh
+- Resizable transaction history table with CSV export
+- Bureau settings (margins, rate TTL, bureau name, max transaction amount)
+
+### Backend
+- Rate caching in PostgreSQL — prunes rows older than 24 h
+- Transaction rate-limiting (10 requests / 15 min per IP)
+- Atomic till deduct / add / restock with history entries
+- Email receipt fired async after every transaction (never blocks response)
+- Swagger UI at `/api/docs`
 
 ---
 
 ## Rate & Margin System
 
-1. **Live fetch** — every 60 s the backend calls `https://api.frankfurter.app/latest?base=CAD` to get market rates quoted as *units of foreign per 1 CAD*.
-
-2. **Fallback rates** — Frankfurter covers 13 of the 20 bureau currencies. MAD, TND, DZD, SAR, AED, QAR, and KWD use hardcoded approximate rates in `rateService.ts`.
-
+1. **Live fetch** — every 60 s the backend calls `https://api.frankfurter.app/latest?base=CAD`.
+2. **Fallback rates** — currencies not covered by Frankfurter use hardcoded approximate rates in `rateService.ts` (MAD, SAR, AED, QAR, KWD, DOP, XCD, CUP).
 3. **Margins:**
    ```
    buyRate  = marketRate × BUY_MARGIN   (0.985 → bureau pays 1.5% less than market)
    sellRate = marketRate × SELL_MARGIN  (1.015 → bureau charges 1.5% more than market)
    ```
-
 4. **CAD conversion:**
    ```
    amountCAD = amountForeign / rateApplied
    ```
    - Client *sells* to bureau (`type=buy`)  → uses `buyRate`
    - Client *buys* from bureau (`type=sell`) → uses `sellRate`
-
-5. **Cache** — rates are persisted to `exchange_rates` in Postgres. Rows older than 24 h are pruned automatically.
+5. **Cache** — rates are persisted to `ExchangeRate` in Postgres. Rows older than 24 h are pruned automatically.
 
 ---
 
@@ -177,19 +198,20 @@ docker-compose up --build
 
 Full interactive docs at **`http://localhost:3001/api/docs`**.
 
-| Method | Path | Description |
-|---|---|---|
-| GET | `/api/rates` | All live rates (cached) |
-| POST | `/api/rates/refresh` | Force-refresh from Frankfurter |
-| GET | `/api/currencies` | Supported currency list with flags |
-| GET | `/api/currencies/:code/denominations` | Denomination inventory for a currency |
-| GET | `/api/till` | Full till — summary + flat inventory |
-| PUT | `/api/till/restock` | Set denomination quantities |
-| GET | `/api/transaction` | Transaction history |
-| POST | `/api/transaction` | Process a buy or sell |
-| POST | `/api/auth/login` | Admin login |
-| GET | `/api/config` | Bureau settings |
-| PUT | `/api/config` | Update bureau settings |
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/api/rates` | — | All live rates (cached) |
+| POST | `/api/rates/refresh` | Admin | Force-refresh from Frankfurter |
+| GET | `/api/currencies` | — | Supported currency list with flags |
+| GET | `/api/currencies/:code/denominations` | — | Denomination inventory for a currency |
+| GET | `/api/till` | Admin | Full till — summary + flat inventory |
+| PUT | `/api/till/restock` | Admin | Set denomination quantities |
+| GET | `/api/till/history` | Admin | Till change audit log |
+| GET | `/api/transaction` | Admin | Transaction history |
+| POST | `/api/transaction` | — | Process a buy or sell (rate-limited) |
+| POST | `/api/auth/login` | — | Admin login |
+| GET | `/api/config` | Admin | Bureau settings |
+| PUT | `/api/config` | Admin | Update bureau settings |
 
 ### POST /api/transaction
 
@@ -199,7 +221,8 @@ Full interactive docs at **`http://localhost:3001/api/docs`**.
   "type": "sell",
   "currency": "USD",
   "amount_foreign": 500,
-  "denominations": { "100": 4, "50": 2 }
+  "denominations": { "100": 4, "50": 2 },
+  "customer_email": "customer@example.com"
 }
 
 // Response
@@ -214,11 +237,11 @@ Full interactive docs at **`http://localhost:3001/api/docs`**.
   "rate": 0.7214,
   "denominations_given": { "100": 4, "50": 2 },
   "denominations_received": {},
-  "timestamp": "2026-03-15T00:00:00.000Z"
+  "timestamp": "2026-03-21T00:00:00.000Z"
 }
 ```
 
-`denominations` is optional — omit or send `{}` to skip denomination tracking.
+`denominations` and `customer_email` are optional. When `customer_email` is provided, an HTML receipt is sent via Resend.
 
 ---
 
@@ -239,8 +262,8 @@ Full interactive docs at **`http://localhost:3001/api/docs`**.
 currency-bureau/
 ├── backend/
 │   ├── prisma/
-│   │   ├── schema.prisma          # DB schema (5 models)
-│   │   ├── seed.ts                # Seeds 20 currencies + till inventory
+│   │   ├── schema.prisma          # DB schema (6 models)
+│   │   ├── seed.ts                # Seeds 22 currencies + till inventory
 │   │   └── migrations/
 │   ├── src/
 │   │   ├── routes/
@@ -248,11 +271,12 @@ currency-bureau/
 │   │   │   ├── config.ts
 │   │   │   ├── currencies.ts
 │   │   │   ├── rates.ts
-│   │   │   ├── till.ts
+│   │   │   ├── till.ts            # includes /history endpoint
 │   │   │   └── transactions.ts
 │   │   ├── services/
+│   │   │   ├── emailService.ts    # Resend HTML receipt (lazy init)
 │   │   │   ├── rateService.ts     # Frankfurter fetch + TTL cache
-│   │   │   └── tillService.ts     # Atomic deduct / add / restock
+│   │   │   └── tillService.ts     # Atomic deduct / add / restock + history
 │   │   ├── socket.ts              # socket.io singleton + emitters
 │   │   ├── app.ts
 │   │   ├── index.ts
@@ -262,19 +286,23 @@ currency-bureau/
 ├── client-app/                    # Public kiosk (port 5173)
 │   ├── src/
 │   │   ├── components/            # CurrencySelector, DenominationPicker,
-│   │   │                          # RateDisplay, Receipt, Toast, ThemeToggle
+│   │   │                          # RateDisplay, Receipt, Toast,
+│   │   │                          # ThemeToggle, LanguageToggle, CurrencyFlag
 │   │   ├── hooks/                 # useRates, useDenominations
+│   │   ├── locales/               # en/translation.json, fr/translation.json
 │   │   ├── pages/                 # ExchangePage
+│   │   ├── i18n.ts
 │   │   └── types.ts
 │   ├── Dockerfile
 │   └── nginx.conf
 │
 ├── admin-app/                     # Operator dashboard (port 5174)
 │   ├── src/
-│   │   ├── components/            # Layout, Sidebar, Toast
-│   │   ├── hooks/                 # useSocket, useAuth
-│   │   ├── pages/                 # Dashboard, Till, Rates,
-│   │   │                          # Transactions, Settings, Login
+│   │   ├── components/            # Layout, Sidebar, Toast, CurrencyFlag
+│   │   ├── hooks/                 # useSocket, useAuth, useColumnResize
+│   │   ├── pages/                 # Dashboard, TillPage, TillHistoryPage,
+│   │   │                          # RatesPage, TransactionsPage,
+│   │   │                          # SettingsPage, LoginPage
 │   │   └── types.ts
 │   ├── Dockerfile
 │   └── nginx.conf
@@ -288,7 +316,7 @@ currency-bureau/
 
 ## Supported Currencies
 
-| Code | Currency | Live Rate |
+| Code | Currency | Source |
 |---|---|---|
 | USD | US Dollar | ✅ Frankfurter |
 | EUR | Euro | ✅ Frankfurter |
@@ -303,10 +331,12 @@ currency-bureau/
 | AUD | Australian Dollar | ✅ Frankfurter |
 | HKD | Hong Kong Dollar | ✅ Frankfurter |
 | SGD | Singapore Dollar | ✅ Frankfurter |
+| NZD | New Zealand Dollar | ✅ Frankfurter |
 | MAD | Moroccan Dirham | ⚡ Fallback |
-| TND | Tunisian Dinar | ⚡ Fallback |
-| DZD | Algerian Dinar | ⚡ Fallback |
 | SAR | Saudi Riyal | ⚡ Fallback |
 | AED | UAE Dirham | ⚡ Fallback |
 | QAR | Qatari Riyal | ⚡ Fallback |
 | KWD | Kuwaiti Dinar | ⚡ Fallback |
+| DOP | Dominican Peso | ⚡ Fallback |
+| XCD | East Caribbean Dollar | ⚡ Fallback |
+| CUP | Cuban Peso | ⚡ Fallback |

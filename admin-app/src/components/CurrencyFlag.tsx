@@ -2,8 +2,9 @@
 const CURRENCY_TO_COUNTRY: Record<string, string> = {
   USD: 'us', EUR: 'eu', GBP: 'gb', CHF: 'ch', JPY: 'jp',
   CNY: 'cn', TRY: 'tr', MXN: 'mx', INR: 'in', BRL: 'br',
-  AUD: 'au', HKD: 'hk', SGD: 'sg', MAD: 'ma', TND: 'tn',
-  DZD: 'dz', SAR: 'sa', AED: 'ae', QAR: 'qa', KWD: 'kw',
+  AUD: 'au', HKD: 'hk', SGD: 'sg', MAD: 'ma',
+  SAR: 'sa', AED: 'ae', QAR: 'qa', KWD: 'kw',
+  NZD: 'nz', DOP: 'do', CUP: 'cu', XCD: 'vc',
 };
 
 interface CurrencyFlagProps {

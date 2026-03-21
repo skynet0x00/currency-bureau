@@ -351,7 +351,7 @@ export function TransactionsPage({ push: pushProp }: TransactionsPageProps) {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="text-sm" style={{ tableLayout: 'fixed', width: Object.values(widths).reduce((a, b) => a + b, 0) }}>
+              <table className="text-sm w-full" style={{ tableLayout: 'fixed', minWidth: Object.values(widths).reduce((a, b) => a + b, 0) }}>
                 <colgroup>
                   <col style={{ width: widths.id }} />
                   <col style={{ width: widths.time }} />

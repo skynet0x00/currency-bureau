@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useSocket, useSocketEvent } from '../hooks/useSocket';
 import { CurrencyFlag } from '../components/CurrencyFlag';
@@ -49,11 +49,13 @@ export function TillPage({ push: pushProp }: TillPageProps) {
   const [till, setTill] = useState<TillEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [edit, setEdit] = useState<EditState | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
+  const [focusedRowIdx, setFocusedRowIdx] = useState<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const rowRefs = useRef<(HTMLTableRowElement | null)[]>([]);
   const socket = useSocket();
   const token = localStorage.getItem('bureau_admin_token');
 
@@ -108,7 +110,7 @@ export function TillPage({ push: pushProp }: TillPageProps) {
     setEdit(null);
   }
 
-  async function saveEdit() {
+  async function saveEdit(): Promise<void> {
     if (!edit) return;
     const qty = parseInt(edit.value, 10);
     if (isNaN(qty) || qty < 0) {
@@ -173,13 +175,58 @@ export function TillPage({ push: pushProp }: TillPageProps) {
 
   // ── Detail view (currency selected) ───────────────────────────────────────
 
+  // Sorted denominations — stable reference for keyboard nav
+  const sortedDenoms = useMemo(
+    () => selectedEntry?.denominations.slice().sort((a, b) => b.denomination - a.denomination) ?? [],
+    [selectedEntry]
+  );
+
+  // When entering detail view, focus row 0 and open its edit immediately
+  useEffect(() => {
+    if (selectedEntry && sortedDenoms.length > 0) {
+      setFocusedRowIdx(0);
+      startEdit(selectedEntry.currency_code, sortedDenoms[0].denomination, sortedDenoms[0].quantity);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCode]);
+
+  // Keep inputRef focused when edit changes
+  useEffect(() => {
+    if (edit && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [edit]);
+
+  function moveFocus(direction: 1 | -1) {
+    if (!selectedEntry) return;
+    const next = Math.max(0, Math.min(sortedDenoms.length - 1, focusedRowIdx + direction));
+    if (next === focusedRowIdx) return;
+    // Save current silently then move
+    if (edit) {
+      const qty = parseInt(edit.value, 10);
+      if (!isNaN(qty) && qty >= 0) {
+        socket.emit('admin:restock', { currency: edit.currency, denominations: { [edit.denomination]: qty } });
+        setTill(prev => prev.map(e => e.currency_code === edit.currency
+          ? { ...e, denominations: e.denominations.map(d => d.denomination === edit.denomination ? { ...d, quantity: qty } : d) }
+          : e
+        ));
+      }
+    }
+    setFocusedRowIdx(next);
+    const d = sortedDenoms[next];
+    const currentQty = selectedEntry.denominations.find(x => x.denomination === d.denomination)?.quantity ?? 0;
+    setEdit({ currency: selectedEntry.currency_code, denomination: d.denomination, value: String(currentQty) });
+    rowRefs.current[next]?.scrollIntoView({ block: 'nearest' });
+  }
+
   if (selectedEntry) {
     return (
       <div className="space-y-4">
         {/* Back bar */}
         <div className="flex items-center justify-between gap-3">
           <button
-            onClick={() => { setSelectedCode(null); setEdit(null); }}
+            onClick={() => { setSelectedCode(null); setEdit(null); setFocusedRowIdx(0); }}
             className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -188,7 +235,7 @@ export function TillPage({ push: pushProp }: TillPageProps) {
             Back
           </button>
           <p className="text-xs text-gray-400 dark:text-gray-500 hidden sm:block">
-            Click any quantity to edit inline · changes broadcast via socket
+            ↑ ↓ to navigate · type quantity · Enter to save · Esc to cancel
           </p>
           <button
             onClick={fetchTill}
@@ -222,83 +269,70 @@ export function TillPage({ push: pushProp }: TillPageProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {selectedEntry.denominations
-                  .slice()
-                  .sort((a, b) => b.denomination - a.denomination)
-                  .map(denom => {
-                    const isEditing =
-                      edit?.currency === selectedEntry.currency_code &&
-                      edit?.denomination === denom.denomination;
-                    const cellClass = qtyClass(denom.quantity);
+                {sortedDenoms.map((denom, idx) => {
+                  const isFocused = idx === focusedRowIdx;
+                  const cellClass = qtyClass(denom.quantity);
 
-                    return (
-                      <tr
-                        key={denom.denomination}
-                        className="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                      >
-                        <td className="px-5 py-3 font-mono font-medium text-gray-900 dark:text-white">
-                          {selectedEntry.currency_code} {denom.denomination.toLocaleString('en-CA', { minimumFractionDigits: denom.denomination % 1 !== 0 ? 2 : 0 })}
-                        </td>
-                        <td className="px-5 py-3">
-                          {isEditing ? (
-                            <div className="flex items-center gap-2">
-                              <input
-                                ref={inputRef}
-                                type="number"
-                                min={0}
-                                value={edit!.value}
-                                onChange={e => setEdit(prev => prev ? { ...prev, value: e.target.value } : null)}
-                                onKeyDown={e => {
-                                  if (e.key === 'Enter') saveEdit();
-                                  if (e.key === 'Escape') cancelEdit();
-                                }}
-                                className="w-24 px-2 py-1 text-sm rounded border bg-white dark:bg-gray-800 border-emerald-400 dark:border-emerald-500 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                              />
-                              <button
-                                onClick={saveEdit}
-                                disabled={saving}
-                                className="px-2 py-1 text-xs font-medium bg-emerald-600 dark:bg-emerald-600 hover:bg-emerald-700 dark:hover:bg-emerald-500 text-white rounded transition-colors disabled:opacity-50"
-                              >
-                                {saving ? '…' : 'Save'}
-                              </button>
-                              <button
-                                onClick={cancelEdit}
-                                className="px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => startEdit(selectedEntry.currency_code, denom.denomination, denom.quantity)}
-                              className={`px-3 py-1 rounded font-mono font-semibold cursor-pointer hover:ring-2 hover:ring-emerald-400 transition-all ${cellClass}`}
-                              title="Click to edit"
-                            >
-                              {denom.quantity}
-                            </button>
-                          )}
-                        </td>
-                        <td className="px-5 py-3 font-mono text-gray-700 dark:text-gray-300">
-                          {selectedEntry.currency_code} {(denom.denomination * denom.quantity).toLocaleString('en-CA', { minimumFractionDigits: denom.denomination % 1 !== 0 ? 2 : 0 })}
-                        </td>
-                        <td className="px-5 py-3">
-                          {denom.quantity === 0 ? (
-                            <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400">
-                              Out of stock
-                            </span>
-                          ) : denom.quantity < 10 ? (
-                            <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400">
-                              Low stock
-                            </span>
-                          ) : (
-                            <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400">
-                              OK
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  return (
+                    <tr
+                      key={denom.denomination}
+                      ref={el => { rowRefs.current[idx] = el; }}
+                      onClick={() => {
+                        setFocusedRowIdx(idx);
+                        startEdit(selectedEntry.currency_code, denom.denomination, denom.quantity);
+                      }}
+                      className={`transition-colors cursor-pointer ${
+                        isFocused
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40'
+                          : 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'
+                      }`}
+                    >
+                      <td className="px-5 py-3 font-mono font-medium text-gray-900 dark:text-white">
+                        {selectedEntry.currency_code} {denom.denomination.toLocaleString('en-CA', { minimumFractionDigits: denom.denomination % 1 !== 0 ? 2 : 0 })}
+                      </td>
+                      <td className="px-5 py-3">
+                        {isFocused ? (
+                          <input
+                            ref={inputRef}
+                            type="number"
+                            min={0}
+                            value={edit?.denomination === denom.denomination ? edit.value : String(denom.quantity)}
+                            onChange={e => setEdit(prev => prev ? { ...prev, value: e.target.value } : null)}
+                            onKeyDown={e => {
+                              if (e.key === 'ArrowDown') { e.preventDefault(); moveFocus(1); }
+                              else if (e.key === 'ArrowUp') { e.preventDefault(); moveFocus(-1); }
+                              else if (e.key === 'Enter') { e.preventDefault(); saveEdit().then(() => moveFocus(1)); }
+                              else if (e.key === 'Escape') { cancelEdit(); }
+                            }}
+                            className="w-28 px-2 py-1 text-sm rounded border bg-white dark:bg-gray-800 border-emerald-400 dark:border-emerald-500 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono font-semibold"
+                          />
+                        ) : (
+                          <span className={`px-3 py-1 rounded font-mono font-semibold ${cellClass}`}>
+                            {denom.quantity}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3 font-mono text-gray-700 dark:text-gray-300">
+                        {selectedEntry.currency_code} {(denom.denomination * denom.quantity).toLocaleString('en-CA', { minimumFractionDigits: denom.denomination % 1 !== 0 ? 2 : 0 })}
+                      </td>
+                      <td className="px-5 py-3">
+                        {denom.quantity === 0 ? (
+                          <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400">
+                            Out of stock
+                          </span>
+                        ) : denom.quantity < 10 ? (
+                          <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400">
+                            Low stock
+                          </span>
+                        ) : (
+                          <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400">
+                            OK
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

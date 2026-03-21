@@ -10,11 +10,12 @@ interface LayoutProps {
 }
 
 const pageTitles: Record<string, string> = {
-  '/':             'Dashboard',
-  '/till':         'Till Inventory',
-  '/rates':        'Exchange Rates',
-  '/transactions': 'Transactions',
-  '/settings':     'Settings',
+  '/':              'Dashboard',
+  '/till':          'Till Inventory',
+  '/till-history':  'Till History',
+  '/rates':         'Exchange Rates',
+  '/transactions':  'Transactions',
+  '/settings':      'Settings',
 };
 
 export function Layout({ auth, push }: LayoutProps) {

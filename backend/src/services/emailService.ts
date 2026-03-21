@@ -1,6 +1,6 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY ?? 're_3M1vDZWt_M2sgZTQTdtostaa9csd3gkyY');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export interface ReceiptData {
   transactionId: string;

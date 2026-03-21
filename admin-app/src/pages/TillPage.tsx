@@ -287,17 +287,20 @@ export function TillPage({ push: pushProp }: TillPageProps) {
                         {isFocused ? (
                           <input
                             ref={inputRef}
-                            type="number"
-                            min={0}
+                            type="text"
+                            inputMode="numeric"
                             value={edit?.denomination === denom.denomination ? edit.value : String(denom.quantity)}
-                            onChange={e => setEdit(prev => prev ? { ...prev, value: e.target.value } : null)}
+                            onChange={e => {
+                              const v = e.target.value;
+                              if (/^\d*$/.test(v)) setEdit(prev => prev ? { ...prev, value: v } : null);
+                            }}
                             onKeyDown={e => {
                               if (e.key === 'ArrowDown') { e.preventDefault(); moveFocus(1); }
                               else if (e.key === 'ArrowUp') { e.preventDefault(); moveFocus(-1); }
                               else if (e.key === 'Enter') { e.preventDefault(); saveEdit().then(() => moveFocus(1)); }
                               else if (e.key === 'Escape') { cancelEdit(); }
                             }}
-                            className="w-28 px-2 py-1 text-sm rounded border bg-white dark:bg-gray-800 border-emerald-400 dark:border-emerald-500 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono font-semibold"
+                            className="w-full px-3 py-1.5 text-sm rounded border bg-white dark:bg-gray-800 border-emerald-400 dark:border-emerald-500 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono font-semibold [appearance:textfield]"
                           />
                         ) : (
                           <span className={`px-3 py-1 rounded font-mono font-semibold ${cellClass}`}>

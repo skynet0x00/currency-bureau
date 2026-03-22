@@ -63,6 +63,10 @@ function seedQty(denom: number): number {
 }
 
 async function main() {
+  console.log('🧹 Removing deprecated currencies (TND, DZD)...');
+  await prisma.tillInventory.deleteMany({ where: { currencyCode: { in: ['TND', 'DZD'] } } });
+  await prisma.currency.deleteMany({ where: { code: { in: ['TND', 'DZD'] } } });
+
   console.log('🌱 Seeding currencies...');
   for (const c of CURRENCIES) {
     await prisma.currency.upsert({

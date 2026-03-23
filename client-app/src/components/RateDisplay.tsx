@@ -10,8 +10,6 @@ interface RateDisplayProps {
 export function RateDisplay({ rate, secondsLeft, mode }: RateDisplayProps) {
   if (!rate) return null;
 
-  const activeRate = mode === 'buy' ? rate.buyRate : rate.sellRate;
-
   return (
     <div
       style={{ animation: 'fadeIn 0.2s ease-out' }}
@@ -69,15 +67,6 @@ export function RateDisplay({ rate, secondsLeft, mode }: RateDisplayProps) {
         </div>
       </div>
 
-      {/* Active rate highlight */}
-      <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
-        <span className="text-sm text-gray-500 dark:text-gray-400">
-          Applied rate ({mode === 'buy' ? 'Bureau buys from you' : 'Bureau sells to you'}):
-        </span>
-        <span className="text-lg font-bold text-gray-900 dark:text-white">
-          1 {rate.code} = <span className="text-blue-600 dark:text-blue-400">{activeRate.toFixed(4)} CAD</span>
-        </span>
-      </div>
     </div>
   );
 }

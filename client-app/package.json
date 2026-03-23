@@ -10,17 +10,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@sentry/react": "^10.43.0",
-    "i18next": "^25.10.2",
+    "@sentry/react": "^10.45.0",
+    "i18next": "^25.10.5",
     "lucide-react": "^0.577.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-i18next": "^16.6.0",
+    "react-i18next": "^16.6.2",
     "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
-    "@tailwindcss/postcss": "^4.2.1",
+    "@tailwindcss/postcss": "^4.2.2",
     "@types/node": "^24.12.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -30,7 +30,7 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.56.1",
-    "vite": "^8.0.0"
+    "typescript-eslint": "^8.57.2",
+    "vite": "^8.0.2"
   }
 }

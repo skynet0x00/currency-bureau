@@ -7,6 +7,22 @@ import { sendReceiptEmail } from '../services/emailService';
 
 const router = Router();
 
+// In-memory cache for bureau config values that rarely change
+let _cachedMaxAmount: number | null = null;
+let _cachedMaxAmountAt = 0;
+const MAX_AMOUNT_CACHE_MS = 5 * 60 * 1000; // 5 minutes
+
+async function getMaxTransactionAmount(): Promise<number> {
+  const now = Date.now();
+  if (_cachedMaxAmount !== null && now - _cachedMaxAmountAt < MAX_AMOUNT_CACHE_MS) {
+    return _cachedMaxAmount;
+  }
+  const cfg = await prisma.bureauConfig.findUnique({ where: { key: 'max_transaction_amount' } });
+  _cachedMaxAmount = parseFloat(cfg?.value ?? '10000');
+  _cachedMaxAmountAt = now;
+  return _cachedMaxAmount;
+}
+
 interface TransactionBody {
   type: 'buy' | 'sell';
   currency: string;
@@ -80,9 +96,8 @@ router.post('/', async (req: Request, res: Response) => {
     return;
   }
 
-  // Enforce max transaction amount from config
-  const maxCfg = await prisma.bureauConfig.findUnique({ where: { key: 'max_transaction_amount' } });
-  const maxAmount = parseFloat(maxCfg?.value ?? '10000');
+  // Enforce max transaction amount from config (cached)
+  const maxAmount = await getMaxTransactionAmount();
   if (rawAmount > maxAmount) {
     res.status(400).json({ error: `Transaction amount exceeds the maximum allowed limit of ${maxAmount}` });
     return;

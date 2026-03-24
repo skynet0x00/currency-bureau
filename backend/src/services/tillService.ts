@@ -34,11 +34,19 @@ export async function checkTillSufficiency(
   currencyCode: string,
   denominations: DenominationMap
 ): Promise<TillCheckResult> {
-  for (const [denomStr, qty] of Object.entries(denominations)) {
+  const entries = Object.entries(denominations);
+  const rows = await Promise.all(
+    entries.map(([denomStr]) =>
+      prisma.tillInventory.findUnique({
+        where: { currencyCode_denomination: { currencyCode, denomination: parseFloat(denomStr) } },
+      })
+    )
+  );
+
+  for (let i = 0; i < entries.length; i++) {
+    const [denomStr, qty] = entries[i];
     const denom = parseFloat(denomStr);
-    const row = await prisma.tillInventory.findUnique({
-      where: { currencyCode_denomination: { currencyCode, denomination: denom } },
-    });
+    const row = rows[i];
     if (!row) {
       return { ok: false, missing: `Denomination ${denom} not supported for ${currencyCode}` };
     }

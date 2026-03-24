@@ -115,21 +115,17 @@ export async function refreshRates() {
   // Merge live rates with fallback rates for unsupported currencies
   const allRates: Record<string, number> = { ...FALLBACK_RATES_VS_CAD, ...marketRates };
 
-  const inserts = Object.entries(allRates)
-    .filter(([code]) => SUPPORTED_CURRENCIES.includes(code))
-    .map(([code, market]) =>
-      prisma.exchangeRate.create({
-        data: {
-          currencyCode: code,
-          marketRate:   market,
-          buyRate:      market * BUY_MARGIN,
-          sellRate:     market * SELL_MARGIN,
-          fetchedAt:    now,
-        },
-      })
-    );
-
-  await prisma.$transaction(inserts);
+  await prisma.exchangeRate.createMany({
+    data: Object.entries(allRates)
+      .filter(([code]) => SUPPORTED_CURRENCIES.includes(code))
+      .map(([code, market]) => ({
+        currencyCode: code,
+        marketRate:   market,
+        buyRate:      market * BUY_MARGIN,
+        sellRate:     market * SELL_MARGIN,
+        fetchedAt:    now,
+      })),
+  });
 
   // Clean up rates older than 24 h to prevent unbounded growth
   await prisma.exchangeRate.deleteMany({

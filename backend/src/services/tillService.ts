@@ -72,21 +72,20 @@ export async function deductFromTill(
 ) {
   for (const [denomStr, qty] of Object.entries(denominations)) {
     const denom = parseFloat(denomStr);
-    const before = await (tx as any).tillInventory.findUnique({
-      where: { currencyCode_denomination: { currencyCode, denomination: denom } },
-    });
-    const quantityBefore = before?.quantity ?? 0;
-    await (tx as any).tillInventory.update({
+    // update returns the new record — derive quantityBefore from it (no extra findUnique needed)
+    const updated = await (tx as any).tillInventory.update({
       where: { currencyCode_denomination: { currencyCode, denomination: denom } },
       data: { quantity: { decrement: qty } },
     });
+    const quantityAfter  = updated.quantity;
+    const quantityBefore = quantityAfter + qty;
     await (tx as any).tillHistoryEntry.create({
       data: {
         currency:      currencyCode,
         changeType:    'WITHDRAWAL',
         denomination:  denom,
         quantityBefore,
-        quantityAfter: quantityBefore - qty,
+        quantityAfter,
         quantityDelta: -qty,
         performedBy,
         note: 'Transaction sell',
@@ -107,22 +106,21 @@ export async function addToTill(
 ) {
   for (const [denomStr, qty] of Object.entries(denominations)) {
     const denom = parseFloat(denomStr);
-    const before = await (tx as any).tillInventory.findUnique({
-      where: { currencyCode_denomination: { currencyCode, denomination: denom } },
-    });
-    const quantityBefore = before?.quantity ?? 0;
-    await (tx as any).tillInventory.upsert({
+    // upsert returns the new record — derive quantityBefore from it (no extra findUnique needed)
+    const result = await (tx as any).tillInventory.upsert({
       where: { currencyCode_denomination: { currencyCode, denomination: denom } },
       update: { quantity: { increment: qty } },
       create: { currencyCode, denomination: denom, quantity: qty },
     });
+    const quantityAfter  = result.quantity;
+    const quantityBefore = quantityAfter - qty;
     await (tx as any).tillHistoryEntry.create({
       data: {
         currency:      currencyCode,
         changeType:    'DEPOSIT',
         denomination:  denom,
         quantityBefore,
-        quantityAfter: quantityBefore + qty,
+        quantityAfter,
         quantityDelta: qty,
         performedBy,
         note: 'Transaction buy',

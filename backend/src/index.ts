@@ -5,19 +5,32 @@ import { initSocket } from './socket';
 import prisma from './db/client';
 import { refreshRates } from './services/rateService';
 
-const PORT = parseInt(process.env.PORT ?? '3001', 10);
+const PORT         = parseInt(process.env.PORT         ?? '3001', 10);
+const RATE_TTL_MS  = parseInt(process.env.RATE_TTL_SECONDS ?? '60', 10) * 1000;
 
 async function main() {
   await prisma.$connect();
   console.log('✅ Database connected');
 
-  // Pre-warm the rate cache so the first transactions are never slow
+  // Pre-warm the rate cache so the very first transaction is never slow
   try {
     await refreshRates();
     console.log('✅ Rate cache warmed');
   } catch (err) {
-    console.warn('⚠️  Rate pre-warm failed (will retry on first request):', err);
+    console.warn('⚠️  Rate pre-warm failed (will retry on schedule):', err);
   }
+
+  // Keep rates perpetually fresh — refresh on a background interval so
+  // no transaction ever blocks on an external Frankfurter API call.
+  // Refresh at 90 % of TTL so there is always headroom before expiry.
+  const refreshInterval = Math.max(RATE_TTL_MS * 0.9, 10_000);
+  setInterval(async () => {
+    try {
+      await refreshRates();
+    } catch (err) {
+      console.warn('⚠️  Background rate refresh failed:', err);
+    }
+  }, refreshInterval);
 
   const app    = createApp();
   const server = http.createServer(app);

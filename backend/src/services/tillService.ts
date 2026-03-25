@@ -35,12 +35,23 @@ export async function checkTillSufficiency(
   denominations: DenominationMap
 ): Promise<TillCheckResult> {
   const entries = Object.entries(denominations);
+
+  // Use findFirst with individual field conditions — NOT findUnique with the composite
+  // unique key. Prisma's composite key lookup generates a row-value comparison:
+  //   WHERE ("currencyCode", "denomination") = ($1, $2)
+  // PostgreSQL's tuple comparison is type-strict: when $2 is bound as int4 (which
+  // Prisma does for whole-number JS numbers like 5, 10, 50) against a DOUBLE PRECISION
+  // column, it does not perform the implicit int4→float8 cast that a plain
+  //   WHERE "denomination" = $2
+  // condition does — so the row is not found even though it exists.
   const rows = await Promise.all(
-    entries.map(([denomStr]) =>
-      prisma.tillInventory.findUnique({
-        where: { currencyCode_denomination: { currencyCode, denomination: parseFloat(denomStr) } },
-      })
-    )
+    entries.map(([denomStr]) => {
+      const denom = parseFloat(denomStr);
+      console.log(`[till] sufficiency lookup currencyCode=${currencyCode} denomination=${denom} typeof=${typeof denom}`);
+      return prisma.tillInventory.findFirst({
+        where: { currencyCode, denomination: denom },
+      });
+    })
   );
 
   for (let i = 0; i < entries.length; i++) {
@@ -48,14 +59,12 @@ export async function checkTillSufficiency(
     const denom = parseFloat(denomStr);
     const row = rows[i];
     if (!row) {
-      // Log full till state so this never silently disappears — helps diagnose
-      // whether this is an inventory gap, a seed issue, or a data race.
       prisma.tillInventory
         .findMany({ where: { currencyCode } })
         .then(current => {
           console.error(
-            `[till] denomination_not_found currency=${currencyCode} denomination=${denom} ` +
-            `requested_qty=${qty} ` +
+            `[till] denomination_not_found currencyCode=${currencyCode} denomination=${denom} ` +
+            `typeof=${typeof denom} requested_qty=${qty} ` +
             `current_till=${JSON.stringify(current.map(r => ({ d: r.denomination, q: r.quantity })))}`
           );
         })

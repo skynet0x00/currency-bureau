@@ -119,8 +119,12 @@ export function DashboardPage({ push: pushProp }: DashboardPageProps) {
             created_at:       raw.timestamp ?? raw.created_at ?? '',
           })
         );
-        const todayStr = new Date().toLocaleDateString('en-CA');
-        const todayTx = txData.filter(t => t.created_at?.startsWith(todayStr));
+        // Compare Date objects against local midnight boundaries — startsWith on UTC ISO strings
+        // breaks after 8 PM EDT (midnight UTC) when the UTC date rolls ahead of the local date.
+        const _now = new Date();
+        const todayStart = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate());
+        const tomorrowStart = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate() + 1);
+        const todayTx = txData.filter(t => { const d = new Date(t.created_at); return d >= todayStart && d < tomorrowStart; });
 
         setTransactions(txData.slice(0, 20));
         setLoadingTx(false);
@@ -185,8 +189,11 @@ export function DashboardPage({ push: pushProp }: DashboardPageProps) {
       });
     }, 2000);
 
-    const todayStr = new Date().toLocaleDateString('en-CA');
-    if (tx.created_at?.startsWith(todayStr)) {
+    // Same fix: local midnight boundaries instead of UTC prefix string match
+    const _n = new Date();
+    const _start = new Date(_n.getFullYear(), _n.getMonth(), _n.getDate());
+    const _end = new Date(_n.getFullYear(), _n.getMonth(), _n.getDate() + 1);
+    if (new Date(tx.created_at) >= _start && new Date(tx.created_at) < _end) {
       setMetrics(prev => ({
         ...prev,
         txCount: prev.txCount + 1,
